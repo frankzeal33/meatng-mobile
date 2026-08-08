@@ -1,9 +1,39 @@
-:root {
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
-  --font-serif: Georgia, 'Times New Roman', serif;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@import "nativewind/theme";
+
+@theme {
+  --color-green: #218225;
+  --color-green-mildLight: #dfffe2;
+  --color-green-light: #e2efe3;
+  --color-green-lighter: #f4f9f4;
+  --color-gray: #777777;
+  --color-background: #f7f7f5;
+
+  --font-mthin: "Montserrat-Thin", sans-serif;
+  --font-mlight: "Montserrat-Light", sans-serif;
+  --font-mregular: "Montserrat-Regular", sans-serif;
+  --font-mmedium: "Montserrat-Medium", sans-serif;
+  --font-mbold: "Montserrat-Bold", sans-serif;
+  --font-msbold: "Montserrat-SemiBold", sans-serif;
+  --font-mblack: "Montserrat-Black", sans-serif;
+
+  --animate-spin-fast: spin 0.5s linear infinite;
+  --animate-none: none;
+  --animate-blink: blink 1s ease-in-out infinite;
+
+  @keyframes blink {
+    0%,
+    80%,
+    100% {
+      opacity: 1;
+    }
+
+    85%,
+    95% {
+      opacity: 0;
+    }
+  }
 }

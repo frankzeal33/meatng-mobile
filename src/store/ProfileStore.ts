@@ -1,18 +1,35 @@
-import type { ProfileStore, UserProfile } from "@/types/stores";
-import { create } from "zustand";
+import { create } from 'zustand';
+
+interface UserProfile {
+  phoneNumber: string;
+  countryOfResidence:  string;
+  email:  string;
+  fullName:  string;
+  profilePicture:  string;
+  kycVerified: boolean;
+  gender:  string;
+  dateOfBirth: string;
+  isEmailVerified: boolean;
+}
+
+interface ProfileStore {
+  userProfile: UserProfile;
+  email: string;
+  setProfile: (profile: UserProfile) => void;
+  setEmail: (email: string) => void;
+  clearProfile: () => void;
+}
 
 const defaultUserProfile: UserProfile = {
   phoneNumber: "",
   countryOfResidence: "",
   email: "",
   fullName: "",
-  userName: "",
   profilePicture: "",
   kycVerified: false,
   gender: "",
-  isProfileCreated: false,
   dateOfBirth: "",
-  isEmailVerified: false,
+  isEmailVerified: false
 };
 
 export const useProfileStore = create<ProfileStore>((set) => ({

@@ -5,7 +5,7 @@ import {
 import type { SavedAddress, SavedAddressCardProps } from "@/types/settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 
 const initialAddresses: SavedAddress[] = [
@@ -83,31 +83,22 @@ function SavedAddressCard({
 
 export default function AddressesScreen() {
   const [addresses, setAddresses] = useState(initialAddresses);
-  const edit = useCallback(
-    (item: SavedAddress) =>
-      router.push({
-        pathname: "/(protected)/(tabs)/Settings/EditAddress",
-        params: { id: item.id },
-      }),
-    [],
-  );
-  const remove = useCallback(
-    (item: SavedAddress) =>
-      setAddresses((current) =>
-        current.filter((address) => address.id !== item.id),
-      ),
-    [],
-  );
-  const setDefault = useCallback(
-    (item: SavedAddress) =>
-      setAddresses((current) =>
-        current.map((address) => ({
-          ...address,
-          isDefault: address.id === item.id,
-        })),
-      ),
-    [],
-  );
+  const edit = (item: SavedAddress) =>
+    router.push({
+      pathname: "/(protected)/(tabs)/Settings/EditAddress",
+      params: { id: item.id },
+    });
+  const remove = (item: SavedAddress) =>
+    setAddresses((current) =>
+      current.filter((address) => address.id !== item.id),
+    );
+  const setDefault = (item: SavedAddress) =>
+    setAddresses((current) =>
+      current.map((address) => ({
+        ...address,
+        isDefault: address.id === item.id,
+      })),
+    );
   return (
     <SettingsScreenRoot>
       <SettingsHeader

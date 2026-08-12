@@ -5,8 +5,17 @@ import { Pressable, ScrollView, Text } from "react-native";
 
 function CatalogCategories({
   activeCategory,
+  categories,
   onCategoryChange,
 }: CatalogCategoriesProps) {
+  const options =
+    categories ??
+    catalogCategories.map((category) => ({
+      id: category,
+      name: category,
+      value: category,
+    }));
+
   return (
     <ScrollView
       horizontal
@@ -14,15 +23,15 @@ function CatalogCategories({
       className="mt-2 px-4"
       contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
     >
-      {catalogCategories.map((category) => {
-        const isActive = activeCategory === category;
+      {options.map((category) => {
+        const isActive = activeCategory === category.value;
 
         return (
           <Pressable
-            key={category}
+            key={category.id}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
-            onPress={() => onCategoryChange(category)}
+            onPress={() => onCategoryChange(category.value)}
             className={`min-w-24 items-center rounded-full border px-5 py-2 ${
               isActive ? "border-green bg-green" : "border-gray-300 bg-white"
             }`}
@@ -30,7 +39,7 @@ function CatalogCategories({
             <Text
               className={`font-msbold text-xs ${isActive ? "text-white" : "text-gray"}`}
             >
-              {category}
+              {category.name}
             </Text>
           </Pressable>
         );

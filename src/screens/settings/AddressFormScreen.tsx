@@ -5,7 +5,7 @@ import {
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
 import type { AddressForm, AddressFormScreenProps } from "@/types/settings";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -28,11 +28,8 @@ export default function AddressFormScreen({ mode }: AddressFormScreenProps) {
     country: "",
     zipCode: "",
   });
-  const update = useCallback(
-    <K extends keyof AddressForm>(key: K, value: AddressForm[K]) =>
-      setForm((current) => ({ ...current, [key]: value })),
-    [],
-  );
+  const update = <K extends keyof AddressForm>(key: K, value: AddressForm[K]) =>
+    setForm((current) => ({ ...current, [key]: value }));
   return (
     <SettingsScreenRoot>
       <SettingsHeader

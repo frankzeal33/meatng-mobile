@@ -5,7 +5,7 @@ import {
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
 import type { ChangePasswordForm } from "@/types/settings";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { ScrollView } from "react-native";
 
 export default function ChangePasswordScreen() {
@@ -14,11 +14,8 @@ export default function ChangePasswordScreen() {
     newPassword: "",
     confirmPassword: "",
   });
-  const update = useCallback(
-    (key: keyof ChangePasswordForm, value: string) =>
-      setForm((current) => ({ ...current, [key]: value })),
-    [],
-  );
+  const update = (key: keyof ChangePasswordForm, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
   return (
     <SettingsScreenRoot>
       <SettingsHeader

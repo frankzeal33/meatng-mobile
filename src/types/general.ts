@@ -4,13 +4,14 @@ import type { ComponentProps } from "react";
 
 export type PlanType = {
   id: string;
+  isFeatured?: boolean;
   name: string;
-  type: "Custom" | "Standard";
+  type: string;
   description: string;
   price: string;
   weight: string;
   breakdown: string;
-  image: ImageSource;
+  image: ImageSource | string;
 };
 
 export type PlanCardProps = {
@@ -23,7 +24,7 @@ export type PreBuiltItemType = {
   name: string;
   weight: string;
   quantity: number;
-  image: ImageSource;
+  image?: ImageSource | string;
 };
 
 export type AppIconName = ComponentProps<typeof MaterialCommunityIcons>["name"];

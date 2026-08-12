@@ -5,7 +5,6 @@ import { useAuthStore } from "@/store/AuthStore";
 import type { SettingsMenuItem, SettingsMenuRowProps } from "@/types/settings";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
-import { useCallback } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 
 const menuItems: SettingsMenuItem[] = [
@@ -59,20 +58,17 @@ function SettingsMenuRow({ item, onPress }: SettingsMenuRowProps) {
 export default function SettingsScreen() {
   const logout = useAuthStore((state) => state.logout);
 
-  const openItem = useCallback(
-    (item: SettingsMenuItem) => {
-      if (item.id === "logout") {
-        logout();
-        router.replace("/(onboarding)/Login");
-        return;
-      }
+  const openItem = (item: SettingsMenuItem) => {
+    if (item.id === "logout") {
+      logout();
+      router.replace("/(onboarding)/Login");
+      return;
+    }
 
-      if (item.route) {
-        router.push(item.route);
-      }
-    },
-    [logout],
-  );
+    if (item.route) {
+      router.push(item.route);
+    }
+  };
 
   return (
     <SettingsScreenRoot>

@@ -1,16 +1,26 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
+import CartHeaderButton from "@/components/CartHeaderButton";
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
+import {
+  AreaPickerSheet,
+  StatePickerSheet,
+} from "@/components/DeliveryLocationSheets";
+import SavedAddressSheet, {
+  SAVED_ADDRESS_PLACEHOLDER,
+  type SavedAddress,
+} from "@/components/SavedAddressSheet";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import TextArea from "@/components/TextArea";
 import { catalogProducts } from "@/data/meatCatalog";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 import type { CheckoutRouteParams } from "@/types/onboarding";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -23,17 +33,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const savedAddresses = [
-  "Select a saved address",
-  "Home - 12 Adeniyi Jones Avenue",
-];
-const states = ["Select your state", "Lagos", "Ogun", "Oyo"];
-const deliveryAreas = [
-  "Select your delivery area",
-  "Ikeja",
-  "Lekki",
-  "Victoria Island",
-];
 const DELIVERY_FEE = 5000;
 const mandatoryCuts = [
   {
@@ -45,11 +44,6 @@ const mandatoryCuts = [
   { id: "bone-in", name: "Bone in Beef", weight: "1kg" },
   { id: "whole-chicken", name: "Whole Chicken", weight: "1.5kg" },
 ];
-
-function nextOption(options: string[], current: string) {
-  const currentIndex = options.indexOf(current);
-  return options[(currentIndex + 1) % options.length];
-}
 
 function parseSelections(value?: string): Record<string, number> {
   if (!value) return {};
@@ -84,16 +78,21 @@ function formatWeight(weightInGrams: number) {
 
 export default function Checkout() {
   const params = useLocalSearchParams<CheckoutRouteParams>();
+  const subInfo = useSubscriptionStore((state) => state.subInfo);
+  const attributes = subInfo?.subscription?.attributes;
   const orderSummaryRef = useRef<BottomSheetModal>(null);
+  const savedAddressRef = useRef<BottomSheetModal>(null);
+  const statePickerRef = useRef<BottomSheetModal>(null);
+  const areaPickerRef = useRef<BottomSheetModal>(null);
   const orderSummarySnapPoints = useMemo(() => ["90%"], []);
-  const [savedAddress, setSavedAddress] = useState(savedAddresses[0]);
+  const [savedAddress, setSavedAddress] = useState<SavedAddress | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [state, setState] = useState(states[0]);
+  const [state, setState] = useState("Lagos");
   const [isDefaultAddress, setIsDefaultAddress] = useState(false);
-  const [deliveryArea, setDeliveryArea] = useState(deliveryAreas[0]);
+  const [deliveryArea, setDeliveryArea] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [apartment, setApartment] = useState("");
   const [zipCode, setZipCode] = useState("");
@@ -118,23 +117,35 @@ export default function Checkout() {
       ),
     [addOnSelections],
   );
-  const planPrice = parsePrice(params.price);
+  const planPrice = attributes?.price ?? 0;
   const addOnsPrice = parsePrice(params.addOnsPrice);
   const orderSubtotal = parsePrice(params.total) || planPrice + addOnsPrice;
   const orderTotal = orderSubtotal + DELIVERY_FEE;
 
-  const selectNextSavedAddress = useCallback(
-    () => setSavedAddress((current) => nextOption(savedAddresses, current)),
-    [],
-  );
-  const selectNextState = useCallback(
-    () => setState((current) => nextOption(states, current)),
-    [],
-  );
-  const selectNextDeliveryArea = useCallback(
-    () => setDeliveryArea((current) => nextOption(deliveryAreas, current)),
-    [],
-  );
+  const selectSavedAddress = (address: SavedAddress) => {
+    const [selectedFirstName, ...remainingNames] = address.recipient.split(" ");
+
+    setSavedAddress(address);
+    setFirstName(selectedFirstName ?? "");
+    setLastName(remainingNames.join(" "));
+    setPhoneNumber(address.phone);
+    setState(address.state);
+    setDeliveryArea(address.deliveryArea);
+    setStreetAddress(address.streetAddress);
+    setApartment(address.apartment);
+    setZipCode(address.zipCode);
+    savedAddressRef.current?.dismiss();
+  };
+  const selectState = (selectedState: string) => {
+    setState(selectedState);
+    setDeliveryArea("");
+    statePickerRef.current?.dismiss();
+  };
+
+  const selectDeliveryArea = (area: string) => {
+    setDeliveryArea(area);
+    areaPickerRef.current?.dismiss();
+  };
 
   return (
     <SafeAreaView
@@ -151,7 +162,7 @@ export default function Checkout() {
         <View className="px-4">
           <SpaceBetweenHeader
             onBackPress={() => router.back()}
-            showRight={false}
+            rightContent={<CartHeaderButton />}
           />
         </View>
 
@@ -169,10 +180,14 @@ export default function Checkout() {
           <View className="mt-4 gap-4">
             <FormField
               title="Use a saved address"
-              value={savedAddress === savedAddresses[0] ? "" : savedAddress}
-              placeholder={savedAddresses[0]}
+              value={
+                savedAddress
+                  ? `${savedAddress.label} - ${savedAddress.streetAddress}`
+                  : ""
+              }
+              placeholder={SAVED_ADDRESS_PLACEHOLDER}
               disabled
-              onPress={selectNextSavedAddress}
+              onPress={() => savedAddressRef.current?.present()}
               rightElement={
                 <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
               }
@@ -216,10 +231,22 @@ export default function Checkout() {
             <FormField
               title="State"
               required
-              value={state === states[0] ? "" : state}
-              placeholder={states[0]}
+              value={state}
+              placeholder="Select your state"
               disabled
-              onPress={selectNextState}
+              onPress={() => statePickerRef.current?.present()}
+              rightElement={
+                <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
+              }
+            />
+
+            <FormField
+              title="Delivery Area"
+              required
+              value={deliveryArea}
+              placeholder="Select your delivery area"
+              disabled
+              onPress={() => areaPickerRef.current?.present()}
               rightElement={
                 <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
               }
@@ -239,17 +266,6 @@ export default function Checkout() {
               </Text>
             </View>
 
-            <FormField
-              title="Delivery Area"
-              required
-              value={deliveryArea === deliveryAreas[0] ? "" : deliveryArea}
-              placeholder={deliveryAreas[0]}
-              disabled
-              onPress={selectNextDeliveryArea}
-              rightElement={
-                <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
-              }
-            />
             <FormField
               title="Street Address"
               required
@@ -313,7 +329,7 @@ export default function Checkout() {
                   Frequency
                 </Text>
                 <Text className="font-mregular text-base">
-                  {params.frequency ?? "Monthly"}
+                  {subInfo?.selectedFrequency ?? "monthly"}
                 </Text>
               </View>
 
@@ -351,6 +367,25 @@ export default function Checkout() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <SavedAddressSheet
+        ref={savedAddressRef}
+        selectedAddressId={savedAddress?.id}
+        onSelect={selectSavedAddress}
+      />
+
+      <StatePickerSheet
+        ref={statePickerRef}
+        selectedState={state}
+        onSelect={selectState}
+      />
+
+      <AreaPickerSheet
+        ref={areaPickerRef}
+        state={state}
+        selectedArea={deliveryArea}
+        onSelect={selectDeliveryArea}
+      />
 
       <CustomButtomSheet
         ref={orderSummaryRef}
@@ -499,18 +534,18 @@ export default function Checkout() {
             <View className="rounded-2xl bg-white p-4">
               <SpaceBetween
                 title="Plan"
-                value={params.planName ?? "Signature Box"}
+                value={attributes?.name ?? "Subscription Plan"}
                 titleStyles="text-gray"
               />
               <SpaceBetween
                 title="Weight"
-                value={params.weight ?? "10kg"}
+                value={`${attributes?.weight ?? 0}${attributes?.weight_unit ?? "kg"}`}
                 containerStyles="mt-2"
                 titleStyles="text-gray"
               />
               <SpaceBetween
                 title="Frequency"
-                value={params.frequency ?? "Monthly"}
+                value={subInfo?.selectedFrequency ?? "monthly"}
                 containerStyles="mt-2"
                 titleStyles="text-gray"
               />

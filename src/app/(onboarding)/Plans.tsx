@@ -3,6 +3,13 @@ import CustomButton from "@/components/CustomButton";
 import PlanCard from "@/components/PlanCard";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { axiosClient } from "@/globalApi";
+import { useAddonStore } from "@/store/addonStore";
+import { useCartStore } from "@/store/cartStore";
+import {
+  type Plan as ApiPlanRecord,
+  useSubscriptionStore,
+} from "@/store/subscriptionStore";
 import type { PlanType } from "@/types/general";
 import type {
   DeliveryFrequency,
@@ -18,82 +25,41 @@ import {
 } from "@gorhom/bottom-sheet";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import displayCurrency from "@/utils/displayCurrency";
 
-const chefCuts = require("../../../assets/images/onboarding/chef-cuts.png");
-const flexibleBox = require("../../../assets/images/onboarding/flexible-box.png");
-const meatLovers = require("../../../assets/images/onboarding/meat-lovers.png");
+type ApiPlan = NonNullable<ApiPlanRecord>;
+type PlanView = PlanType & { subscription: ApiPlan };
 
-const plans: PlanType[] = [
-  {
-    id: "value",
-    name: "Value Plan",
-    type: "Custom",
-    description:
-      "3kg mixed cuts of beef and offal. Choose 500g of offal to complete your box.",
-    price: "₦20,000.00",
-    weight: "3kg box",
-    breakdown: "2.5kg fixed + build 0.5kg",
-    image: chefCuts,
-  },
-  {
-    id: "chicken-crate",
-    name: "Chicken Crate",
-    type: "Standard",
-    description:
-      "The Chicken Crate is built for the real chicken lovers, packed with 5kg of Chicken cut and from to add your favorite cuts. Healthy, fresh, and delivered straight to your door.",
-    price: "₦24,000.00",
-    weight: "5kg box",
-    breakdown: "5kg fixed",
-    image: flexibleBox,
-  },
-  {
-    id: "beef",
-    name: "Beef Box",
-    type: "Standard",
-    description:
-      "The Beef Box is built for those who know good beef, stacked with quality cuts and room to add your favorites. Fresh, healthy, and delivered straight to your door.",
-    price: "₦30,000.00",
-    weight: "4kg box",
-    breakdown: "4kg fixed",
-    image: chefCuts,
-  },
-  {
-    id: "essential",
-    name: "Essential Box",
-    type: "Custom",
-    description:
-      "5kg mixed cuts of beef, chicken & offal. Choose 500g of offal to personalize.",
-    price: "₦35,000.00",
-    weight: "5kg box",
-    breakdown: "4.5kg fixed + build 0.5kg",
-    image: flexibleBox,
-  },
-  {
-    id: "signature",
-    name: "Signature Box",
-    type: "Standard",
-    description:
-      "10kg premium cuts - 5kg mandatory cuts, then build the rest your own way.",
-    price: "₦70,000.00",
-    weight: "10kg box",
-    breakdown: "5kg fixed + build 5kg",
-    image: meatLovers,
-  },
-  {
-    id: "premium",
-    name: "Premium Box",
-    type: "Standard",
-    description:
-      "15kg premium cuts, 5kg Mandatory, then choose and build 10kg however you like it.",
-    price: "₦110,000.00",
-    weight: "15kg box",
-    breakdown: "5kg fixed + build 10kg",
-    image: chefCuts,
-  },
-];
+function toPlanCard(plan: ApiPlan): PlanView {
+  const attributes = plan?.attributes;
+  const fixedWeight = attributes?.prefilled_items_total_weight ?? 0;
+  const remainingWeight = attributes?.remaining_weight ?? 0;
+  const unit = attributes?.weight_unit ?? "kg";
+
+  return {
+    subscription: plan,
+    id: plan?.id ?? "",
+    isFeatured: attributes?.is_featured ?? false,
+    name: attributes?.name ?? "Unnamed plan",
+    type: attributes?.plan_type ?? "Standard",
+    description: attributes?.description ?? "",
+    price: displayCurrency(attributes?.price ?? 0, "NGN"),
+    weight: `${attributes?.weight ?? 0}${unit} box`,
+    breakdown: `${fixedWeight}${unit} fixed${
+      remainingWeight > 0 ? ` + build ${remainingWeight}${unit}` : ""
+    }`,
+    image: attributes?.image
+  };
+}
 
 const deliveryFrequencies: DeliveryFrequency[] = [
   {
@@ -122,7 +88,7 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
   const snapPoints = useMemo(() => ["90%"], []);
   const frequencyModalRef = useRef<BottomSheetModal>(null);
   const summaryModalRef = useRef<BottomSheetModal>(null);
-  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedFrequency, setSelectedFrequency] =
     useState<DeliveryFrequency["id"]>("weekly");
   const selectedFrequencyDetails =
@@ -130,13 +96,25 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
       (frequency) => frequency.id === selectedFrequency,
     ) ?? deliveryFrequencies[0];
 
+  const { setSubInfo } = useSubscriptionStore();
+  const { clearAddon } = useAddonStore();
+  const clearCart = useCartStore((state) => state.clearCart);
+
+  const [plans, setPlans] = useState<PlanView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+  const selectedPlan =
+    plans.find((plan) => plan?.id === selectedPlanId) ?? null;
+  const selectedAttributes = selectedPlan?.subscription?.attributes;
+
   const handlePresentModalPress = useCallback(() => {
     frequencyModalRef.current?.present();
   }, []);
 
   const handleSelectPlan = useCallback(
     (plan: PlanType) => {
-      setSelectedPlan(plan);
+      setSelectedPlanId(plan.id);
       setSelectedFrequency("weekly");
       handlePresentModalPress();
     },
@@ -150,19 +128,19 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
     [handleSelectPlan],
   );
 
-  const handleCloseModalPress = useCallback(() => {
+  const handleCloseModalPress = () => {
     frequencyModalRef.current?.dismiss();
-  }, []);
+  };
 
-  const handlePresentSummary = useCallback(() => {
+  const handlePresentSummary = () => {
     summaryModalRef.current?.present();
-  }, []);
+  };
 
-  const handleCloseSummary = useCallback(() => {
+  const handleCloseSummary = () => {
     summaryModalRef.current?.dismiss();
-  }, []);
+  };
 
-  const handleContinueSummary = useCallback(() => {
+  const handleContinueSummary = () => {
     summaryModalRef.current?.dismiss();
     frequencyModalRef.current?.dismiss();
 
@@ -170,16 +148,57 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
       return;
     }
 
-    router.push({
-      pathname: "/(onboarding)/PrebuiltBox",
-      params: {
-        planName: selectedPlan.name,
-        weight: selectedPlan.weight.replace(" box", ""),
-        frequency: selectedFrequencyDetails.title,
-        price: selectedPlan.price,
-      },
+    clearAddon();
+    clearCart();
+    setSubInfo({
+      subscription: selectedPlan.subscription,
+      selectedFrequency,
     });
-  }, [selectedFrequencyDetails.title, selectedPlan]);
+
+    router.push("/(onboarding)/PrebuiltBox");
+  };
+
+  useEffect(() => {
+    void fetchPlans();
+  }, []);
+
+  const fetchPlans = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      setError(false);
+
+      const response = await axiosClient.get<{ data?: ApiPlan[] }>("/plans");
+      const data = response?.data?.data ?? [];
+      const transformedPlans = data.map(toPlanCard);
+
+      setPlans(transformedPlans);
+
+      if (transformedPlans.length > 0) {
+        const featuredPlan = transformedPlans.find(
+          (plan) => plan?.isFeatured,
+        );
+        const fallbackPlan =
+          transformedPlans[Math.min(2, transformedPlans.length - 1)];
+        const selected = featuredPlan ?? fallbackPlan;
+
+        if (selected?.id) {
+          setSelectedPlanId(String(selected.id));
+        }
+      }
+    } catch {
+      setError(true);
+      setPlans([]);
+      setSelectedPlanId(null);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchPlans(false);
+    setRefreshing(false);
+  };
 
   const renderFrequency = useCallback(
     ({ item }: DeliveryFrequencyListItemProps) => {
@@ -189,8 +208,8 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
         <Pressable
           accessibilityRole="radio"
           accessibilityState={{ selected: isSelected }}
-          accessibilityLabel={`${item.title}: ${item.billing}`}
-          onPress={() => setSelectedFrequency(item.id)}
+          accessibilityLabel={`${item?.title}: ${item?.billing}`}
+          onPress={() => setSelectedFrequency(item?.id)}
           className={`rounded-2xl border p-5 ${
             isSelected
               ? "border-green bg-green-lighter"
@@ -200,15 +219,15 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
           <View className="flex-row items-center gap-2">
             <Ionicons name="calendar-outline" size={18} color="#218225" />
             <Text className="font-mbold text-xl text-[#292929]">
-              {item.title}
+              {item?.title}
             </Text>
           </View>
 
           <Text className="mt-2 font-mregular text-lg text-gray">
-            {item.description}
+            {item?.description}
           </Text>
           <Text className="mt-2 font-mregular text-lg text-green">
-            {item.billing}
+            {item?.billing}
           </Text>
         </Pressable>
       );
@@ -231,29 +250,62 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
         />
       )}
 
-      <FlatList
-        data={plans}
-        renderItem={renderPlan}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingTop: isTab ? 16 : 12,
-          paddingBottom: isTab ? 16 : insets.bottom + 12,
-          gap: 16,
-        }}
-        ListHeaderComponent={
-          <View className="pb-2">
-            <Text className={`font-mbold ${isTab ? "text-xl" : "text-2xl"}`}>
-              {isTab ? "Plans" : "Pick a plan, build your box."}
-            </Text>
-            <Text className="font-mregular text-sm leading-5 text-gray">
-              {isTab
-                ? "Each plan comes pre-packed with quality cuts."
-                : "Each plan comes pre-packed with quality cuts. Choose your delivery frequency, then add optional extras on the next step."}
-            </Text>
-          </View>
-        }
-      />
+      {loading && (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#218225" />
+        </View>
+      )}
+
+      {!loading && (
+        <FlatList
+          data={plans}
+          renderItem={renderPlan}
+          keyExtractor={(item) => item.id}
+          refreshing={refreshing}
+          onRefresh={() => void handleRefresh()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: plans.length === 0 ? 1 : undefined,
+            paddingTop: isTab ? 16 : 12,
+            paddingBottom: isTab ? 16 : insets.bottom + 12,
+            gap: 16,
+          }}
+          ListHeaderComponent={
+            plans.length > 0 ? (
+              <View className="pb-2">
+                <Text
+                  className={`font-mbold ${isTab ? "text-xl" : "text-2xl"}`}
+                >
+                  {isTab ? "Plans" : "Pick a plan, build your box."}
+                </Text>
+                <Text className="font-mregular text-sm leading-5 text-gray">
+                  {isTab
+                    ? "Each plan comes pre-packed with quality cuts."
+                    : "Each plan comes pre-packed with quality cuts. Choose your delivery frequency, then add optional extras on the next step."}
+                </Text>
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View className="flex-1 items-center justify-center px-6">
+              <Text className="font-mbold text-xl">
+                {error ? "Couldn't load plans" : "No plans found"}
+              </Text>
+              <Text className="mt-2 text-center font-mregular text-sm text-gray">
+                {error
+                  ? "Something went wrong while fetching subscription plans. Please try again."
+                  : "There are no subscription plans available right now. Please check back later."}
+              </Text>
+              <CustomButton
+                title="Retry"
+                handlePress={() => void fetchPlans()}
+                containerStyles="mt-6 px-8"
+                textStyles="text-white"
+              />
+            </View>
+          }
+        />
+      )}
 
       <CustomButtomSheet
         ref={frequencyModalRef}
@@ -329,7 +381,7 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
               <SpaceBetween title="Plan" value={selectedPlan?.name ?? "—"} />
               <SpaceBetween
                 title="Weight"
-                value={selectedPlan?.weight.replace(" box", "") ?? "—"}
+                value={selectedPlan?.weight?.replace(" box", "") ?? "—"}
                 containerStyles="mt-2"
               />
               <SpaceBetween
@@ -340,51 +392,58 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
               />
               <SpaceBetween
                 title="Frequency"
-                value={selectedFrequencyDetails.title}
+                value={selectedFrequencyDetails?.title}
                 containerStyles="mt-2"
                 valueStyles="font-msbold text-green"
               />
             </View>
 
-            <View className="rounded-2xl bg-white p-5">
-              <Text className="font-mbold text-xl">What's included</Text>
-              <Text className="mt-2 font-mregular text-base leading-6 text-gray">
-                {selectedPlan?.breakdown ?? "Plan contents"}
-              </Text>
-              <Text className="mt-2 font-mregular text-base leading-6 text-gray">
-                Premium cuts selected for your {selectedPlan?.weight ?? "box"}
-              </Text>
-              {selectedPlan?.type === "Custom" && (
-                <Text className="mt-2 font-mregular text-base leading-6 text-green">
-                  + Pick the remaining custom portion
-                </Text>
-              )}
-            </View>
-
-            <View className="rounded-2xl bg-white p-5">
-              {[
-                `${selectedPlan?.breakdown ?? "Quality cuts included"}`,
-                `Delivered ${selectedFrequencyDetails.title.toLowerCase()}`,
-                "Dashboard control (edit/skip/pause)",
-                "Flexible delivery scheduling",
-              ].map((benefit) => (
-                <View
-                  key={benefit}
-                  className="mb-2 flex-row items-center gap-3 last:mb-0"
-                >
-                  <View className="size-5 items-center justify-center rounded-full bg-green-light">
-                    <Ionicons
-                      name="chevron-forward"
-                      size={12}
-                      color="#218225"
-                    />
-                  </View>
-                  <Text className="flex-1 font-mregular text-sm leading-5 text-gray">
-                    {benefit}
+            {(selectedAttributes?.prefilled_items?.length ?? 0) > 0 && (
+              <View className="rounded-2xl bg-white p-5">
+                <Text className="font-mbold text-xl">What's included</Text>
+                {selectedAttributes?.prefilled_items?.map((item) => (
+                    <Text
+                      key={item?.product_id}
+                      className="mt-2 font-mregular text-base leading-6 text-gray"
+                    >
+                      {item?.name} - {item?.weight}
+                      {item?.weight_unit}
+                      {(item?.quantity ?? 0) > 1
+                        ? ` X (${item?.quantity})`
+                        : ""}
+                    </Text>
+                  ))}
+                {(selectedAttributes?.remaining_weight ?? 0) > 0 && (
+                  <Text className="mt-2 font-mregular text-base leading-6 text-green">
+                    + Pick the remaining{" "}
+                    {selectedAttributes?.remaining_weight}
+                    {selectedAttributes?.weight_unit}
                   </Text>
-                </View>
-              ))}
-            </View>
+                )}
+              </View>
+            )}
+
+            {(selectedAttributes?.highlights?.length ?? 0) > 0 && (
+              <View className="rounded-2xl bg-white p-5">
+                {selectedAttributes?.highlights?.map((benefit, index) => (
+                    <View
+                      key={`${benefit}-${index}`}
+                      className="mb-2 flex-row items-center gap-3 last:mb-0"
+                    >
+                      <View className="size-5 items-center justify-center rounded-full bg-green-light">
+                        <Ionicons
+                          name="chevron-forward"
+                          size={12}
+                          color="#218225"
+                        />
+                      </View>
+                      <Text className="flex-1 font-mregular text-sm leading-5 text-gray">
+                        {benefit}
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+            )}
           </BottomSheetScrollView>
 
           <CustomButton

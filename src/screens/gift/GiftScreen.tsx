@@ -140,20 +140,20 @@ export default function GiftScreen({ variant = "tab" }: GiftScreenProps) {
     previewModalRef.current?.present();
   }, []);
 
-  const handleClosePreview = useCallback(() => {
+  const handleClosePreview = () => {
     previewModalRef.current?.dismiss();
-  }, []);
+  };
 
-  const handleContinuePreview = useCallback(() => {
+  const handleContinuePreview = () => {
     if (!selectedGift) {
       return;
     }
 
     pendingRecipientGiftRef.current = selectedGift;
     previewModalRef.current?.dismiss();
-  }, [selectedGift]);
+  };
 
-  const handlePreviewDismiss = useCallback(() => {
+  const handlePreviewDismiss = () => {
     const giftBox = pendingRecipientGiftRef.current;
 
     if (!giftBox) {
@@ -171,7 +171,7 @@ export default function GiftScreen({ variant = "tab" }: GiftScreenProps) {
         includedCuts: JSON.stringify(giftBox.includedCuts),
       },
     });
-  }, []);
+  };
 
   const renderGiftBox = useCallback(
     ({ item }: GiftBoxListItemProps) => (

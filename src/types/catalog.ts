@@ -1,29 +1,45 @@
 import type { ImageSource } from "expo-image";
 
-export type ProductCategory = "Chicken" | "Beef" | "Offal";
+export type ProductCategory = string;
 
-export type CategoryFilter = "All" | ProductCategory;
+export type CategoryFilter = string;
+
+export type CatalogCategoryOption = {
+  id: string;
+  name: string;
+  value: string;
+};
 
 export type CatalogProduct = {
   id: string;
   name: string;
   weightLabel: string;
   weightInGrams: number;
+  weight?: number;
+  weightUnit?: "kg" | "g";
   category: ProductCategory;
+  categoryId?: string;
+  categorySlug?: string;
   price: string;
+  priceValue?: number;
   stock: number;
-  image: ImageSource;
+  isActive?: boolean;
+  image: ImageSource | string;
 };
 
 export type CatalogCategoriesProps = {
   activeCategory: CategoryFilter;
+  categories?: CatalogCategoryOption[];
   onCategoryChange: (category: CategoryFilter) => void;
 };
 
 export type CatalogProductCardProps = {
   item: CatalogProduct;
   quantity: number;
+  categoryBackgroundColor?: string;
+  categoryTextColor?: string;
   canIncrement?: boolean;
+  highlightWhenSelected?: boolean;
   onDecrement: (item: CatalogProduct) => void;
   onIncrement: (item: CatalogProduct) => void;
 };

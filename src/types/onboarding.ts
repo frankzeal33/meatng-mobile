@@ -37,14 +37,7 @@ export type PreBuiltCardProps = {
   item: PreBuiltItemType;
 };
 
-export type PlanRouteParams = {
-  planName?: string;
-  weight?: string;
-  frequency?: string;
-  price?: string;
-};
-
-export type AddOnsRouteParams = PlanRouteParams & {
+export type AddOnsRouteParams = {
   boxSelections?: string;
 };
 

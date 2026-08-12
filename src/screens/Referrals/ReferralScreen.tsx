@@ -7,7 +7,6 @@ import type {
 } from "@/types/general";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "expo-status-bar";
-import { useCallback } from "react";
 import { FlatList, Pressable, Share, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -115,19 +114,19 @@ function ReferralHistoryListItem({ item }: ReferralHistoryListItemProps) {
 
 export default function ReferralScreen() {
   const insets = useSafeAreaInsets();
-  const shareReferral = useCallback(async () => {
+  const shareReferral = async () => {
     await Share.share({
       title: "Join me on MeatNG",
       message: `Use my MeatNG referral code ${referralCode} and earn ₦500 credit: ${referralLink}`,
       url: referralLink,
     });
-  }, []);
-  const shareCode = useCallback(async () => {
+  };
+  const shareCode = async () => {
     await Share.share({ message: referralCode });
-  }, []);
-  const shareLink = useCallback(async () => {
+  };
+  const shareLink = async () => {
     await Share.share({ message: referralLink, url: referralLink });
-  }, []);
+  };
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>

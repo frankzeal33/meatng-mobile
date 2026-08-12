@@ -9,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -50,50 +50,46 @@ export default function RecipientInformationScreen() {
     giftNote: "",
   });
 
-  const updateField = useCallback(
-    (field: keyof GiftRecipientForm, value: string) => {
-      setForm((current) => ({ ...current, [field]: value }));
-    },
-    [],
-  );
+  const updateField = (field: keyof GiftRecipientForm, value: string) =>
+    setForm((current) => ({ ...current, [field]: value }));
 
-  const selectNextOccasion = useCallback(() => {
+  const selectNextOccasion = () => {
     setForm((current) => ({
       ...current,
       occasion: nextOption(occasions, current.occasion),
     }));
-  }, []);
+  };
 
-  const selectNextDeliveryDate = useCallback(() => {
+  const selectNextDeliveryDate = () => {
     setForm((current) => ({
       ...current,
       deliveryDate: current.deliveryDate
         ? nextOption(deliveryDates, current.deliveryDate)
         : deliveryDates[0],
     }));
-  }, []);
+  };
 
-  const selectNextDeliveryWindow = useCallback(() => {
+  const selectNextDeliveryWindow = () => {
     setForm((current) => ({
       ...current,
       deliveryWindow: nextOption(deliveryWindows, current.deliveryWindow),
     }));
-  }, []);
+  };
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = () => {
     confirmationModalRef.current?.present();
-  }, []);
+  };
 
-  const handleCloseConfirmation = useCallback(() => {
+  const handleCloseConfirmation = () => {
     confirmationModalRef.current?.dismiss();
-  }, []);
+  };
 
-  const handleConfirmContinue = useCallback(() => {
+  const handleConfirmContinue = () => {
     pendingGiftCheckoutRef.current = true;
     confirmationModalRef.current?.dismiss();
-  }, []);
+  };
 
-  const handleConfirmationDismiss = useCallback(() => {
+  const handleConfirmationDismiss = () => {
     if (!pendingGiftCheckoutRef.current) {
       return;
     }
@@ -116,7 +112,7 @@ export default function RecipientInformationScreen() {
         giftNote: form.giftNote,
       },
     });
-  }, [form, params]);
+  };
 
   const dropdownIcon = (
     <Ionicons name="chevron-down" size={22} color="#929292" />

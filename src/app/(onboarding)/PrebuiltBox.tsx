@@ -1,56 +1,24 @@
 import CustomButton from "@/components/CustomButton";
+import CartHeaderButton from "@/components/CartHeaderButton";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 import type { PreBuiltItemType } from "@/types/general";
-import type { PlanRouteParams, PreBuiltCardProps } from "@/types/onboarding";
+import type { PreBuiltCardProps } from "@/types/onboarding";
+import { formatEnums } from "@/utils/formatEnums";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const chefCuts = require("../../../assets/images/onboarding/chef-cuts.png");
-const flexibleBox = require("../../../assets/images/onboarding/flexible-box.png");
-const meatLovers = require("../../../assets/images/onboarding/meat-lovers.png");
-
-const preBuiltItems: PreBuiltItemType[] = [
-  {
-    id: "boneless-beef",
-    name: "Boneless Beef",
-    weight: "1kg",
-    quantity: 2,
-    image: chefCuts,
-  },
-  {
-    id: "boneless-beef-500g",
-    name: "Boneless Beef (500g)",
-    weight: "500g",
-    quantity: 1,
-    image: chefCuts,
-  },
-  {
-    id: "bone-in-beef",
-    name: "Bone in Beef",
-    weight: "1kg",
-    quantity: 1,
-    image: meatLovers,
-  },
-  {
-    id: "whole-chicken",
-    name: "Whole Chicken",
-    weight: "1.5kg",
-    quantity: 2,
-    image: flexibleBox,
-  },
-];
 
 const PreBuiltCard = memo(function PreBuiltCard({ item }: PreBuiltCardProps) {
   return (
     <View className="overflow-hidden rounded-2xl bg-white">
       <View className="h-40 overflow-hidden bg-gray-50">
         <ExpoImage
-          source={item.image}
+          source={item?.image}
           contentFit="cover"
           transition={200}
           style={{ width: "100%", height: "100%" }}
@@ -74,19 +42,25 @@ const PreBuiltCard = memo(function PreBuiltCard({ item }: PreBuiltCardProps) {
   );
 });
 
+function renderPreBuiltItem({ item }: PreBuiltCardProps) {
+  return <PreBuiltCard item={item} />;
+}
+
 export default function PrebuiltBox() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<PlanRouteParams>();
-
-  const planName = params.planName ?? "Signature Box";
-  const weight = params.weight ?? "10kg";
-  const frequency = params.frequency ?? "Weekly";
-  const price = params.price ?? "₦70,000.00";
-
-  const renderItem = useCallback(
-    ({ item }: PreBuiltCardProps) => <PreBuiltCard item={item} />,
-    [],
-  );
+  const subInfo = useSubscriptionStore((state) => state.subInfo);
+  const attributes = subInfo?.subscription?.attributes;
+  const planName = attributes?.name ?? "Subscription Plan";
+  const weight = `${attributes?.weight ?? 0}${attributes?.weight_unit ?? "kg"}`;
+  const frequency = formatEnums(subInfo?.selectedFrequency ?? "weekly");
+  const preBuiltItems: PreBuiltItemType[] =
+    attributes?.prefilled_items?.map((item) => ({
+      id: item?.product_id,
+      name: item?.name,
+      weight: `${item?.weight}${item?.weight_unit}`,
+      quantity: item?.quantity,
+      image: item?.image_url,
+    })) ?? [];
 
   return (
     <View
@@ -95,11 +69,14 @@ export default function PrebuiltBox() {
     >
       <StatusBar style="dark" />
 
-      <SpaceBetweenHeader onBackPress={() => router.back()} showRight={false} />
+      <SpaceBetweenHeader
+        onBackPress={() => router.back()}
+        rightContent={<CartHeaderButton />}
+      />
 
       <FlatList
         data={preBuiltItems}
-        renderItem={renderItem}
+        renderItem={renderPreBuiltItem}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -145,17 +122,7 @@ export default function PrebuiltBox() {
 
       <CustomButton
         title="Continue"
-        handlePress={() =>
-          router.push({
-            pathname: "/(onboarding)/BuildYourBox",
-            params: {
-              planName,
-              weight,
-              frequency,
-              price,
-            },
-          })
-        }
+        handlePress={() => router.push("/(onboarding)/BuildYourBox")}
         containerStyles="mb-2 mt-4 w-full"
         textStyles="text-white"
       />

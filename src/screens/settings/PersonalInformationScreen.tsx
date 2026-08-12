@@ -5,7 +5,7 @@ import {
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
 import type { PersonalInformationForm } from "@/types/settings";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { ScrollView } from "react-native";
 
 export default function PersonalInformationScreen() {
@@ -15,11 +15,8 @@ export default function PersonalInformationScreen() {
     email: "",
     phoneNumber: "",
   });
-  const update = useCallback(
-    (key: keyof PersonalInformationForm, value: string) =>
-      setForm((current) => ({ ...current, [key]: value })),
-    [],
-  );
+  const update = (key: keyof PersonalInformationForm, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
   return (
     <SettingsScreenRoot>
       <SettingsHeader

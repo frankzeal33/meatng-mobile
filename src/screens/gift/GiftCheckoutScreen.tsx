@@ -1,6 +1,14 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
+import {
+  AreaPickerSheet,
+  StatePickerSheet,
+} from "@/components/DeliveryLocationSheets";
+import SavedAddressSheet, {
+  SAVED_ADDRESS_PLACEHOLDER,
+  type SavedAddress,
+} from "@/components/SavedAddressSheet";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import TextArea from "@/components/TextArea";
@@ -13,7 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -26,22 +34,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const savedAddresses = [
-  "Select a saved address",
-  "Home - 12 Adeniyi Jones Avenue",
-];
-const states = ["Select your state", "Lagos", "Ogun", "Oyo"];
-const deliveryAreas = [
-  "Select your delivery area",
-  "Ikeja",
-  "Lekki",
-  "Victoria Island",
-];
 const DELIVERY_FEE = 5000;
-
-function nextOption(options: string[], current: string) {
-  return options[(options.indexOf(current) + 1) % options.length];
-}
 
 function parsePrice(value?: string) {
   return Number.parseFloat((value ?? "").replace(/[^0-9.]/g, "")) || 0;
@@ -71,33 +64,66 @@ function getCutDetails(name: string) {
 export default function GiftCheckoutScreen() {
   const params = useLocalSearchParams<GiftCheckoutRouteParams>();
   const orderSummaryRef = useRef<BottomSheetModal>(null);
+  const savedAddressRef = useRef<BottomSheetModal>(null);
+  const statePickerRef = useRef<BottomSheetModal>(null);
+  const areaPickerRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["90%"], []);
   const [form, setForm] = useState<GiftCheckoutForm>({
-    savedAddress: savedAddresses[0],
+    savedAddress: "",
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
-    state: states[0],
+    state: "Lagos",
     isDefaultAddress: false,
-    deliveryArea: deliveryAreas[0],
+    deliveryArea: "",
     streetAddress: "",
     apartment: "",
     zipCode: "",
     deliveryNote: "",
   });
-  const update = useCallback(
-    <K extends keyof GiftCheckoutForm>(key: K, value: GiftCheckoutForm[K]) => {
-      setForm((current) => ({ ...current, [key]: value }));
-    },
-    [],
-  );
+  const [selectedAddressId, setSelectedAddressId] = useState<string>();
+  const update = <K extends keyof GiftCheckoutForm>(
+    key: K,
+    value: GiftCheckoutForm[K],
+  ) => setForm((current) => ({ ...current, [key]: value }));
   const giftPrice = parsePrice(params.price);
   const total = giftPrice + DELIVERY_FEE;
   const includedCuts = useMemo(
     () => parseIncludedCuts(params.includedCuts),
     [params.includedCuts],
   );
+  const selectSavedAddress = (address: SavedAddress) => {
+    const [firstName, ...remainingNames] = address.recipient.split(" ");
+
+    setForm((current) => ({
+      ...current,
+      savedAddress: `${address.label} - ${address.streetAddress}`,
+      firstName: firstName ?? "",
+      lastName: remainingNames.join(" "),
+      phoneNumber: address.phone,
+      state: address.state,
+      deliveryArea: address.deliveryArea,
+      streetAddress: address.streetAddress,
+      apartment: address.apartment,
+      zipCode: address.zipCode,
+    }));
+    setSelectedAddressId(address.id);
+    savedAddressRef.current?.dismiss();
+  };
+  const selectState = (state: string) => {
+    setForm((current) => ({
+      ...current,
+      state,
+      deliveryArea: "",
+    }));
+    statePickerRef.current?.dismiss();
+  };
+
+  const selectDeliveryArea = (deliveryArea: string) => {
+    update("deliveryArea", deliveryArea);
+    areaPickerRef.current?.dismiss();
+  };
 
   return (
     <SafeAreaView
@@ -129,17 +155,10 @@ export default function GiftCheckoutScreen() {
           <View className="mt-4 gap-4">
             <FormField
               title="Use a saved address"
-              value={
-                form.savedAddress === savedAddresses[0] ? "" : form.savedAddress
-              }
-              placeholder={savedAddresses[0]}
+              value={form.savedAddress}
+              placeholder={SAVED_ADDRESS_PLACEHOLDER}
               disabled
-              onPress={() =>
-                update(
-                  "savedAddress",
-                  nextOption(savedAddresses, form.savedAddress),
-                )
-              }
+              onPress={() => savedAddressRef.current?.present()}
               rightElement={
                 <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
               }
@@ -182,14 +201,27 @@ export default function GiftCheckoutScreen() {
             <FormField
               title="State"
               required
-              value={form.state === states[0] ? "" : form.state}
-              placeholder={states[0]}
+              value={form.state}
+              placeholder="Select your state"
               disabled
-              onPress={() => update("state", nextOption(states, form.state))}
+              onPress={() => statePickerRef.current?.present()}
               rightElement={
                 <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
               }
             />
+            
+            <FormField
+              title="Delivery Area"
+              required
+              value={form.deliveryArea}
+              placeholder="Select your delivery area"
+              disabled
+              onPress={() => areaPickerRef.current?.present()}
+              rightElement={
+                <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
+              }
+            />
+
             <View className="flex-row items-center gap-1">
               <Switch
                 value={form.isDefaultAddress}
@@ -203,24 +235,7 @@ export default function GiftCheckoutScreen() {
                 Set as default address
               </Text>
             </View>
-            <FormField
-              title="Delivery Area"
-              required
-              value={
-                form.deliveryArea === deliveryAreas[0] ? "" : form.deliveryArea
-              }
-              placeholder={deliveryAreas[0]}
-              disabled
-              onPress={() =>
-                update(
-                  "deliveryArea",
-                  nextOption(deliveryAreas, form.deliveryArea),
-                )
-              }
-              rightElement={
-                <Ionicons name="chevron-down" size={22} color="#8E8E8E" />
-              }
-            />
+            
             <FormField
               title="Street Address"
               required
@@ -283,6 +298,25 @@ export default function GiftCheckoutScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <SavedAddressSheet
+        ref={savedAddressRef}
+        selectedAddressId={selectedAddressId}
+        onSelect={selectSavedAddress}
+      />
+
+      <StatePickerSheet
+        ref={statePickerRef}
+        selectedState={form.state}
+        onSelect={selectState}
+      />
+
+      <AreaPickerSheet
+        ref={areaPickerRef}
+        state={form.state}
+        selectedArea={form.deliveryArea}
+        onSelect={selectDeliveryArea}
+      />
 
       <CustomButtomSheet
         ref={orderSummaryRef}

@@ -1,4 +1,4 @@
-import type { CountDownProps } from "@/types/components";
+import type { CountDownProps } from "@/types";
 import React, { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 

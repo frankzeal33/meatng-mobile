@@ -1,4 +1,4 @@
-import type { CatalogProductCardProps } from "@/types/catalog";
+import type { CatalogProductCardProps } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { memo } from "react";

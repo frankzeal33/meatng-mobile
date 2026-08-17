@@ -75,4 +75,4 @@ export default function ForgotPassword() {
     </SafeAreaView>
   );
 }
-import type { AuthEmailRouteParams } from "@/types/onboarding";
+import type { AuthEmailRouteParams } from "@/types";

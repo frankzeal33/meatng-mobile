@@ -1,5 +1,7 @@
 import AddressFormScreen from "@/screens/settings/AddressFormScreen";
+import { useLocalSearchParams } from "expo-router";
 
 export default function EditAddressScreen() {
-  return <AddressFormScreen mode="edit" />;
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  return <AddressFormScreen mode="edit" addressId={id} />;
 }

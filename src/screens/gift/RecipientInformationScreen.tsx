@@ -1,12 +1,18 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
 import CustomButton from "@/components/CustomButton";
+import DatePickerField from "@/components/DatePickerField";
 import FormField from "@/components/FormField";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import TextArea from "@/components/TextArea";
-import type { GiftRecipientForm, GiftRecipientRouteParams } from "@/types/gift";
+import type { GiftRecipientForm, GiftRecipientRouteParams } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetFlatList,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
+import { format } from "date-fns";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useRef, useState } from "react";
@@ -19,64 +25,123 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useToast } from "react-native-toast-notifications";
+import { z } from "zod";
+
+const recipientSchema = z.object({
+  recipientName: z.string().trim().min(2, "Recipient name is required"),
+  recipientPhone: z
+    .string()
+    .trim()
+    .min(1, "Recipient phone number is required")
+    .regex(/^\d+$/, "Phone number must contain only digits")
+    .refine(
+      (value) =>
+        value.startsWith("0") ? value.length === 11 : value.length === 10,
+      {
+        message:
+          "Phone number must be 11 digits if it starts with 0, otherwise 10 digits",
+      },
+    ),
+  recipientEmail: z.union([
+    z.literal(""),
+    z.email("Enter a valid recipient email"),
+  ]),
+  occasion: z.string().trim().min(1, "Occasion is required"),
+  deliveryDate: z.date("Preferred delivery date is required"),
+  deliveryWindow: z
+    .string()
+    .trim()
+    .min(1, "Preferred delivery window is required"),
+  giftNote: z
+    .string()
+    .max(240, "Gift note cannot exceed 240 characters"),
+  giftId: z.string().trim().min(1, "Please select a gift box"),
+});
+
+type RecipientField = keyof GiftRecipientForm;
 
 const occasions = [
   "Birthday",
   "Anniversary",
+  "Wedding Gift",
+  "Holiday Hosting",
   "Thank You",
-  "Congratulations",
-  "Other",
+  "Corporate Appreciation",
 ];
-const deliveryDates = ["15/08/2026", "22/08/2026", "29/08/2026"];
-const deliveryWindows = ["8 AM - 12 PM", "12 PM - 4 PM", "4 PM - 7 PM"];
-
-function nextOption(options: string[], current: string) {
-  const currentIndex = options.indexOf(current);
-  return options[(currentIndex + 1) % options.length];
-}
+const deliveryWindows = ["8 AM - 12 PM", "12 PM - 4 PM", "4 PM - 8 PM"];
 
 export default function RecipientInformationScreen() {
   const params = useLocalSearchParams<GiftRecipientRouteParams>();
+  const toast = useToast();
   const confirmationModalRef = useRef<BottomSheetModal>(null);
+  const occasionModalRef = useRef<BottomSheetModal>(null);
+  const deliveryWindowModalRef = useRef<BottomSheetModal>(null);
   const pendingGiftCheckoutRef = useRef(false);
   const confirmationSnapPoints = useMemo(() => ["92%"], []);
+  const optionSnapPoints = useMemo(() => ["75%"], []);
   const [form, setForm] = useState<GiftRecipientForm>({
     recipientName: "",
     recipientPhone: "",
     recipientEmail: "",
     occasion: occasions[0],
-    deliveryDate: "",
+    deliveryDate: null,
     deliveryWindow: deliveryWindows[0],
     giftNote: "",
   });
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [touched, setTouched] = useState<
+    Partial<Record<RecipientField, boolean>>
+  >({});
 
-  const updateField = (field: keyof GiftRecipientForm, value: string) =>
-    setForm((current) => ({ ...current, [field]: value }));
+  const validation = recipientSchema.safeParse({
+    ...form,
+    giftId: params.giftId ?? "",
+  });
+  const errors: Partial<Record<RecipientField | "giftId", string>> = {};
+  if (!validation.success) {
+    validation.error.issues.forEach((issue) => {
+      const field = issue.path[0] as RecipientField | "giftId";
+      errors[field] ??= issue.message;
+    });
+  }
 
-  const selectNextOccasion = () => {
-    setForm((current) => ({
-      ...current,
-      occasion: nextOption(occasions, current.occasion),
-    }));
+  const fieldError = (field: RecipientField) =>
+    hasSubmitted || touched[field] ? errors[field] : undefined;
+
+  const touchField = (field: RecipientField) =>
+    setTouched((current) => ({ ...current, [field]: true }));
+
+  const updateField = <K extends keyof GiftRecipientForm>(
+    field: K,
+    value: GiftRecipientForm[K],
+  ) => setForm((current) => ({ ...current, [field]: value }));
+
+  const selectOccasion = (occasion: string) => {
+    touchField("occasion");
+    updateField("occasion", occasion);
+    occasionModalRef.current?.dismiss();
   };
 
-  const selectNextDeliveryDate = () => {
-    setForm((current) => ({
-      ...current,
-      deliveryDate: current.deliveryDate
-        ? nextOption(deliveryDates, current.deliveryDate)
-        : deliveryDates[0],
-    }));
+  const selectDeliveryWindow = (deliveryWindow: string) => {
+    touchField("deliveryWindow");
+    updateField("deliveryWindow", deliveryWindow);
+    deliveryWindowModalRef.current?.dismiss();
   };
 
-  const selectNextDeliveryWindow = () => {
-    setForm((current) => ({
-      ...current,
-      deliveryWindow: nextOption(deliveryWindows, current.deliveryWindow),
-    }));
+  const selectDeliveryDate = (selectedDate: Date) => {
+    touchField("deliveryDate");
+    updateField("deliveryDate", selectedDate);
   };
 
   const handleContinue = () => {
+    setHasSubmitted(true);
+    if (!validation.success) {
+      if (errors.giftId) {
+        toast.show(errors.giftId, { type: "danger" });
+      }
+      return;
+    }
     confirmationModalRef.current?.present();
   };
 
@@ -107,7 +172,7 @@ export default function RecipientInformationScreen() {
         recipientPhone: form.recipientPhone,
         recipientEmail: form.recipientEmail,
         occasion: form.occasion,
-        deliveryDate: form.deliveryDate,
+        deliveryDate: form.deliveryDate?.toISOString().split("T")[0] ?? "",
         deliveryWindow: form.deliveryWindow,
         giftNote: form.giftNote,
       },
@@ -151,18 +216,25 @@ export default function RecipientInformationScreen() {
           <View className="mt-4 gap-4">
             <FormField
               title="Recipient Name"
+              required
               value={form.recipientName}
               placeholder="Who is receiving this?"
               handleChangeText={(value) => updateField("recipientName", value)}
               autoCapitalize="words"
+              onBlur={() => touchField("recipientName")}
+              error={fieldError("recipientName")}
             />
 
             <FormField
               title="Recipient Phone Number"
+              required
               value={form.recipientPhone}
               placeholder="For delivery coordination"
               handleChangeText={(value) => updateField("recipientPhone", value)}
               keyboardType="phone-pad"
+              maxLength={11}
+              onBlur={() => touchField("recipientPhone")}
+              error={fieldError("recipientPhone")}
             />
 
             <FormField
@@ -172,30 +244,39 @@ export default function RecipientInformationScreen() {
               handleChangeText={(value) => updateField("recipientEmail", value)}
               keyboardType="email-address"
               autoCapitalize="none"
+              onBlur={() => touchField("recipientEmail")}
+              error={fieldError("recipientEmail")}
+              optional
             />
 
             <FormField
               title="Occasion"
+              required
               value={form.occasion}
               placeholder="Birthday"
-              onPress={selectNextOccasion}
+              onPress={() => occasionModalRef.current?.present()}
               rightElement={dropdownIcon}
+              error={fieldError("occasion")}
             />
 
-            <FormField
+            <DatePickerField
               title="Preferred Delivery Date"
+              required
               value={form.deliveryDate}
-              placeholder="dd/mm/yyyy"
-              onPress={selectNextDeliveryDate}
-              rightElement={dropdownIcon}
+              placeholder="Select delivery date"
+              minimumDate={new Date()}
+              onChange={selectDeliveryDate}
+              error={fieldError("deliveryDate")}
             />
 
             <FormField
               title="Preferred Delivery Window"
+              required
               value={form.deliveryWindow}
               placeholder="8 AM - 12 PM"
-              onPress={selectNextDeliveryWindow}
+              onPress={() => deliveryWindowModalRef.current?.present()}
               rightElement={dropdownIcon}
+              error={fieldError("deliveryWindow")}
             />
 
             <View>
@@ -209,6 +290,11 @@ export default function RecipientInformationScreen() {
               <Text className="mt-2 text-right font-mregular text-sm text-gray">
                 {form.giftNote.length}/240 characters
               </Text>
+              {fieldError("giftNote") ? (
+                <Text className="mt-1 font-mregular text-sm text-red-600">
+                  {fieldError("giftNote")}
+                </Text>
+              ) : null}
             </View>
           </View>
         </ScrollView>
@@ -222,6 +308,97 @@ export default function RecipientInformationScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <CustomButtomSheet
+        ref={occasionModalRef}
+        snapPoints={optionSnapPoints}
+        dynamicSizing={false}
+        scrollable
+      >
+        <View className="h-full">
+          <Text className="font-mbold text-2xl">Select occasion</Text>
+          <Text className="mb-4 mt-1 font-mregular text-sm text-gray">
+            What are you celebrating?
+          </Text>
+          <BottomSheetFlatList
+            data={occasions}
+            keyExtractor={(item) => item}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
+            renderItem={({ item }) => {
+              const selected = form.occasion === item;
+              return (
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => selectOccasion(item)}
+                  className={`flex-row items-center justify-between rounded-xl border px-4 py-4 active:opacity-70 ${
+                    selected
+                      ? "border-green bg-green-lighter"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  <Text className="font-msbold text-base">{item}</Text>
+                  {selected ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color="#218225"
+                    />
+                  ) : null}
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      </CustomButtomSheet>
+
+      <CustomButtomSheet
+        ref={deliveryWindowModalRef}
+        snapPoints={optionSnapPoints}
+        dynamicSizing={false}
+        scrollable
+      >
+        <View className="h-full">
+          <Text className="font-mbold text-2xl">Select delivery window</Text>
+          <Text className="mb-4 mt-1 font-mregular text-sm text-gray">
+            Choose the preferred delivery time.
+          </Text>
+          <BottomSheetFlatList
+            data={deliveryWindows}
+            keyExtractor={(item) => item}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
+            renderItem={({ item }) => {
+              const selected = form.deliveryWindow === item;
+              return (
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => selectDeliveryWindow(item)}
+                  className={`flex-row items-center justify-between rounded-xl border px-4 py-4 active:opacity-70 ${
+                    selected
+                      ? "border-green bg-green-lighter"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="time-outline" size={20} color="#218225" />
+                    <Text className="font-msbold text-base">{item}</Text>
+                  </View>
+                  {selected ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={22}
+                      color="#218225"
+                    />
+                  ) : null}
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      </CustomButtomSheet>
 
       <CustomButtomSheet
         ref={confirmationModalRef}
@@ -275,6 +452,14 @@ export default function RecipientInformationScreen() {
                 containerStyles="mt-4"
                 titleStyles="text-gray"
               />
+              {form.recipientEmail && (
+                <SpaceBetween
+                  title="Email"
+                  value={form.recipientEmail}
+                  containerStyles="mt-4"
+                  titleStyles="text-gray"
+                />
+              )}
               <SpaceBetween
                 title="Occassion"
                 value={form.occasion || "—"}
@@ -283,9 +468,10 @@ export default function RecipientInformationScreen() {
               />
               <SpaceBetween
                 title="Delivery date"
-                value={form.deliveryDate || "—"}
+                value={form.deliveryDate ? format(form.deliveryDate, "do MMM yyyy") : "—"}
                 containerStyles="mt-4"
                 titleStyles="text-gray"
+                valueStyles="font-msbold text-green"
               />
               <SpaceBetween
                 title="Delivery window"

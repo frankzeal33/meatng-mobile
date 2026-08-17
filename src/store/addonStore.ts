@@ -1,4 +1,4 @@
-import type { CatalogProduct } from "@/types/catalog";
+import type { CatalogProduct } from "@/types";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { cartStateStorage } from "./mmkvStorage";

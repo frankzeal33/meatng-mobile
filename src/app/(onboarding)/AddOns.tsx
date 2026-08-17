@@ -12,7 +12,7 @@ import type {
   CatalogProduct,
   CatalogProductListItemProps,
   CategoryFilter,
-} from "@/types/catalog";
+} from "@/types";
 import { toGrams } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
 import { router } from "expo-router";

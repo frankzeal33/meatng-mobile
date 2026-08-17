@@ -1,4 +1,4 @@
-import type { TextAreaProps } from "@/types/components";
+import type { TextAreaProps } from "@/types";
 import { View, Text, TextInput } from "react-native";
 import { useState } from "react";
 

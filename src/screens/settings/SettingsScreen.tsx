@@ -2,7 +2,8 @@ import {
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
 import { useAuthStore } from "@/store/AuthStore";
-import type { SettingsMenuItem, SettingsMenuRowProps } from "@/types/settings";
+import { useProfileStore } from "@/store/ProfileStore";
+import type { SettingsMenuItem, SettingsMenuRowProps } from "@/types";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
 import { FlatList, Pressable, Text, View } from "react-native";
@@ -12,7 +13,7 @@ const menuItems: SettingsMenuItem[] = [
     id: "personal",
     title: "Personal Information",
     icon: "account",
-    route: "/(protected)/(tabs)/Settings/PersonalInformation",
+    route: "/(protected)/(routes)/PersonalInformation",
   },
   {
     id: "password",
@@ -23,8 +24,14 @@ const menuItems: SettingsMenuItem[] = [
   {
     id: "addresses",
     title: "Addresses",
-    icon: "lock",
+    icon: "map-marker",
     route: "/(protected)/(tabs)/Settings/Addresses",
+  },
+  {
+    id: "support",
+    title: "Help & Support",
+    icon: "headset",
+    route: "/(protected)/(tabs)/Settings/Support",
   },
   { id: "logout", title: "Logout", icon: "logout", destructive: true },
 ];
@@ -57,10 +64,11 @@ function SettingsMenuRow({ item, onPress }: SettingsMenuRowProps) {
 
 export default function SettingsScreen() {
   const logout = useAuthStore((state) => state.logout);
+  const clearProfile = useProfileStore((state) => state.clearProfile);
 
-  const openItem = (item: SettingsMenuItem) => {
+  const openItem = async (item: SettingsMenuItem) => {
     if (item.id === "logout") {
-      logout();
+      await Promise.all([logout(), clearProfile()]);
       router.replace("/(onboarding)/Login");
       return;
     }

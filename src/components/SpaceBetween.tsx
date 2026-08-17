@@ -1,4 +1,4 @@
-import type { SpaceBetweenProps } from "@/types/components";
+import type { SpaceBetweenProps } from "@/types";
 import { Text, View } from "react-native";
 
 export default function SpaceBetween({

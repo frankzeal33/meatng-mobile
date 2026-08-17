@@ -1,7 +1,7 @@
 import type {
   CustomBottomSheetProps,
   CustomBottomSheetRef,
-} from "@/types/components";
+} from "@/types";
 import React, { forwardRef, useCallback } from "react";
 import {
   BottomSheetBackdrop,

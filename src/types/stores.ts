@@ -1,32 +1,41 @@
 export type AuthState = {
   isAuthenticated: boolean;
   token: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
-  login: (token: string) => void;
-  logout: () => void;
+  login: (token: string, refreshToken?: string) => Promise<void>;
+  logout: () => Promise<void>;
   setLoading: (loading: boolean) => void;
+};
+
+export type LoaderStore = {
+  isLoading: boolean;
+  showLoader: () => void;
+  hideLoader: () => void;
+  setLoader: (isLoading: boolean) => void;
+};
+
+export type NetworkStore = {
+  isConnected: boolean | null;
+  isInternetReachable: boolean | null;
+  setNetworkState: (
+    isConnected: boolean | null,
+    isInternetReachable: boolean | null,
+  ) => void;
 };
 
 export type UserProfile = {
   phoneNumber: string;
-  countryOfResidence: string;
   email: string;
-  fullName: string;
-  profilePicture: string;
-  userName: string;
-  kycVerified: boolean;
-  gender: string;
-  isProfileCreated: boolean;
-  dateOfBirth: string;
+  firstName: string;
+  lastName: string;
   isEmailVerified: boolean;
 };
 
 export type ProfileStore = {
   userProfile: UserProfile;
-  email: string;
-  setProfile: (profile: UserProfile) => void;
-  setEmail: (email: string) => void;
-  clearProfile: () => void;
+  setProfile: (profile: UserProfile) => Promise<void>;
+  clearProfile: () => Promise<void>;
 };
 
 export type RefData = {

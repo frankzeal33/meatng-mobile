@@ -1,5 +1,5 @@
 import CustomButton from "@/components/CustomButton";
-import { PlanCardProps } from "@/types/general";
+import { PlanCardProps } from "@/types";
 import { Image as ExpoImage } from "expo-image";
 import { memo } from "react";
 import { Text, View } from "react-native";

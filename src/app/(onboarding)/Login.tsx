@@ -1,6 +1,15 @@
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { axiosClient } from "@/globalApi";
+import { useAuthStore } from "@/store/AuthStore";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
+import { useProfileStore } from "@/store/ProfileStore";
+import axios from "axios";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
@@ -16,13 +25,125 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useToast } from "react-native-toast-notifications";
+import z from "zod";
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email address is required")
+    .pipe(z.email({ error: "Enter a valid email address" })),
+  password: z.string().min(2, "Enter a valid password"),
+});
+
+type LoginForm = z.input<typeof loginSchema>;
+type LoginField = keyof LoginForm;
 
 export default function Login() {
   const insets = useSafeAreaInsets();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const toast = useToast();
+  const isLoading = useIsLoading();
+  const login = useAuthStore((state) => state.login);
+  const setProfile = useProfileStore((state) => state.setProfile);
+  const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
+  const [touched, setTouched] = useState<
+    Partial<Record<LoginField, boolean>>
+  >({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  function updateField(field: keyof typeof form, value: string) {
+  const validation = loginSchema.safeParse(form);
+  const errors = validation.success
+    ? {}
+    : validation.error.issues.reduce<Partial<Record<LoginField, string>>>(
+        (fieldErrors, issue) => {
+          const field = issue.path[0] as LoginField;
+          fieldErrors[field] ??= issue.message;
+          return fieldErrors;
+        },
+        {},
+      );
+
+  function fieldError(field: LoginField) {
+    return touched[field] || hasSubmitted ? errors[field] : undefined;
+  }
+
+  function touchField(field: LoginField) {
+    setTouched((current) => ({ ...current, [field]: true }));
+  }
+
+  function updateField(field: LoginField, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  const handleLogin = async () => {
+    setHasSubmitted(true);
+    if (!validation.success || isLoading) return;
+
+    try {
+      showLoader();
+
+      const response = await axiosClient.post(
+        "/auth/login",
+        validation.data,
+      );
+      const attributes = response.data?.data?.attributes;
+
+      const accessToken = attributes?.token?.accessToken
+      const refreshToken = attributes?.token?.refreshToken
+
+      const user = {
+        phoneNumber: attributes?.user?.phone || "",
+        email: attributes?.user?.email || "",
+        firstName: attributes?.user?.first_name || "",
+        lastName: attributes?.user?.last_name || "",
+        isEmailVerified: attributes?.user?.is_email_verified ?? false
+      }
+      await setProfile(user);
+
+      if (accessToken) {
+        await login(accessToken, refreshToken);
+      }
+
+      toast.show("Login successful", {
+        type: "success",
+      });
+
+      router.replace("/(protected)/(tabs)/Home")
+
+      setForm({ email: "", password: "" })
+    } catch (error: any) {
+      const message = error.response?.data?.message
+
+      if (message === "Please verify your email before signing in") {
+        try {
+          const resendResponse = await axiosClient.post("/auth/resend-verification", {
+            email: validation.data.email,
+          });
+
+          toast.show(
+            resendResponse.data?.data?.attributes?.message ??
+              "Verification email resent.",
+            { type: "success" },
+          );
+          router.push({
+            pathname: "/(onboarding)/RegisterOTP",
+            params: { email: validation.data.email },
+          });
+        } catch (resendError: unknown) {
+          toast.show(
+            error.response?.data?.message ?? "Unable to resend verification.",
+            { type: "danger" },
+          );
+        }
+      }
+
+      toast.show(message ?? "Unable to sign in. Please try again.", {
+        type: "danger",
+      });
+    } finally {
+      hideLoader();
+    }
   }
 
   return (
@@ -61,6 +182,8 @@ export default function Login() {
               value={form.email}
               placeholder="you@example.com"
               handleChangeText={(value) => updateField("email", value)}
+              onBlur={() => touchField("email")}
+              error={fieldError("email")}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -70,6 +193,8 @@ export default function Login() {
               value={form.password}
               placeholder="Min. 8 characters"
               handleChangeText={(value) => updateField("password", value)}
+              onBlur={() => touchField("password")}
+              error={fieldError("password")}
               isPassword
               autoCapitalize="none"
               autoComplete="current-password"
@@ -93,9 +218,8 @@ export default function Login() {
 
           <CustomButton
             title="Login"
-            handlePress={() => {
-              router.push("/(protected)/(tabs)/Home");
-            }}
+            handlePress={handleLogin}
+            disableButton={isLoading}
             containerStyles="mt-6"
             textStyles="text-white"
           />

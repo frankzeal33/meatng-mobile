@@ -1,7 +1,7 @@
 import CustomButton from "@/components/CustomButton";
 import CountDown from "@/components/CountDown";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
-import type { AuthOtpScreenProps } from "@/types/components";
+import type { AuthOtpScreenProps } from "@/types";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";

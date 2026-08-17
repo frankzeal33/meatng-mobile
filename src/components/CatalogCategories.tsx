@@ -1,5 +1,5 @@
 import { catalogCategories } from "@/data/meatCatalog";
-import type { CatalogCategoriesProps } from "@/types/catalog";
+import type { CatalogCategoriesProps } from "@/types";
 import { memo } from "react";
 import { Pressable, ScrollView, Text } from "react-native";
 

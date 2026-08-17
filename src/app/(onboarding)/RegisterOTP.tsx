@@ -14,4 +14,4 @@ export default function RegisterOTP() {
     />
   );
 }
-import type { AuthEmailRouteParams } from "@/types/onboarding";
+import type { AuthEmailRouteParams } from "@/types";

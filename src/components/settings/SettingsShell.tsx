@@ -1,7 +1,7 @@
 import type {
   SettingsHeaderProps,
   SettingsScreenRootProps,
-} from "@/types/settings";
+} from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";

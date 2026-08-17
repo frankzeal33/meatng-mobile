@@ -1,4 +1,4 @@
-import type { FormFieldSheetProps } from "@/types/components";
+import type { FormFieldSheetProps } from "@/types";
 import { View, Text, TextInput, Image, TouchableOpacity } from "react-native";
 import { useState } from "react";
 import { BottomSheetTextInput } from "@gorhom/bottom-sheet";

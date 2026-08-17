@@ -7,6 +7,9 @@ import "../global.css";
 import { ToastProvider } from "react-native-toast-notifications";
 import { Ionicons, Octicons } from "@expo/vector-icons";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import LayoutLoader from "@/hooks/LayoutLoader";
+import { useNetworkStore } from "@/store/NetworkStore";
+import NetInfo from "@react-native-community/netinfo";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,6 +30,16 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      useNetworkStore
+        .getState()
+        .setNetworkState(state.isConnected, state.isInternetReachable);
+    });
+
+    return unsubscribe;
+  }, []);
+
   if (!fontsLoaded) {
     return null;
   }
@@ -37,23 +50,24 @@ export default function RootLayout() {
         <ToastProvider
           placement="top"
           animationType="slide-in"
-          successColor="#FFE1CC"
-          dangerColor="#FFE1CC"
-          warningColor="#FFE1CC"
-          normalColor="#FFE1CC"
-          textStyle={{ color: "#000" }}
+          successColor="#E2EFE3"
+          dangerColor="#FDE8E8"
+          warningColor="#FFF4D6"
+          normalColor="#F4F9F4"
+          textStyle={{ color: "#292929" }}
           offset={70}
           successIcon={
-            <Octicons name="check-circle-fill" size={16} color="#000" />
+            <Octicons name="check-circle-fill" size={16} color="#218225" />
           }
           dangerIcon={
-            <Ionicons name="close-circle-sharp" size={16} color="#000" />
+            <Ionicons name="close-circle-sharp" size={16} color="#B52227" />
           }
-          warningIcon={<Ionicons name="warning" size={16} color="#000" />}
+          warningIcon={<Ionicons name="warning" size={16} color="#B26A00" />}
         >
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
           </Stack>
+          <LayoutLoader/>
         </ToastProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

@@ -4,55 +4,164 @@ import {
   SettingsHeader,
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
-import type { ChangePasswordForm } from "@/types/settings";
+import { axiosClient } from "@/globalApi";
+import type { ChangePasswordForm } from "@/types";
 import { useState } from "react";
 import { ScrollView } from "react-native";
+import { useToast } from "react-native-toast-notifications";
+import z from "zod";
 
-export default function ChangePasswordScreen() {
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .regex(
+        /[A-Z]/,
+        "New password must contain at least one uppercase letter",
+      )
+      .regex(
+        /[a-z]/,
+        "New password must contain at least one lowercase letter",
+      )
+      .regex(/[0-9]/, "New password must contain at least one number")
+      .regex(
+        /[^A-Za-z0-9]/,
+        "New password must contain at least one special character",
+      ),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.confirmPassword === data.newPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+const ChangePasswordScreen = () => {
+  const toast = useToast();
   const [form, setForm] = useState<ChangePasswordForm>({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const update = (key: keyof ChangePasswordForm, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof ChangePasswordForm, boolean>>
+  >({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validation = changePasswordSchema.safeParse(form);
+  const errors = validation.success
+    ? {}
+    : validation.error.issues.reduce<
+        Partial<Record<keyof ChangePasswordForm, string>>
+      >((fieldErrors, issue) => {
+        const field = issue.path[0] as keyof ChangePasswordForm;
+        fieldErrors[field] ??= issue.message;
+        return fieldErrors;
+      }, {});
+
+  const fieldError = (field: keyof ChangePasswordForm) =>
+    touched[field] || hasSubmitted ? errors[field] : undefined;
+
+  const touchField = (field: keyof ChangePasswordForm) => {
+    setTouched((current) => ({ ...current, [field]: true }));
+  };
+
+  const updateField = (field: keyof ChangePasswordForm, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleChangePassword = async () => {
+    setHasSubmitted(true);
+    if (!validation.success || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await axiosClient.patch(
+        "/auth/change-password",
+        validation.data,
+      );
+
+      setForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setTouched({});
+      setHasSubmitted(false);
+      toast.show("Password updated successfully.", {
+        type: "success",
+      });
+    } catch (error: any) {
+      toast.show(
+        error.response?.data?.message ?? "Unable to update your password.",
+        { type: "danger" },
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <SettingsScreenRoot>
-      <SettingsHeader
-        title="Change Password"
-        subtitle="Update your password."
-      />
+      <SettingsHeader title="Change Password" subtitle="Update your password." />
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         contentContainerClassName="gap-4 px-4 pb-5 pt-8"
       >
         <FormField
           title="Current Password"
+          required
           value={form.currentPassword}
           placeholder="Enter current password"
-          handleChangeText={(value) => update("currentPassword", value)}
+          handleChangeText={(value) =>
+            updateField("currentPassword", value)
+          }
+          onBlur={() => touchField("currentPassword")}
+          error={fieldError("currentPassword")}
           isPassword
+          autoCapitalize="none"
+          autoComplete="current-password"
         />
         <FormField
           title="New Password"
+          required
           value={form.newPassword}
           placeholder="Enter new password"
-          handleChangeText={(value) => update("newPassword", value)}
+          handleChangeText={(value) => updateField("newPassword", value)}
+          onBlur={() => touchField("newPassword")}
+          error={fieldError("newPassword")}
           isPassword
+          autoCapitalize="none"
+          autoComplete="new-password"
         />
         <FormField
           title="Confirm Password"
+          required
           value={form.confirmPassword}
           placeholder="Confirm password"
-          handleChangeText={(value) => update("confirmPassword", value)}
+          handleChangeText={(value) =>
+            updateField("confirmPassword", value)
+          }
+          onBlur={() => touchField("confirmPassword")}
+          error={fieldError("confirmPassword")}
           isPassword
+          autoCapitalize="none"
+          autoComplete="new-password"
         />
         <CustomButton
-          title="Confirm Password"
-          containerStyles="mt-10 w-full"
+          title={isSubmitting ? "Updating..." : "Change Password"}
+          handlePress={handleChangePassword}
+          containerStyles="mt-6 w-full"
           textStyles="text-white"
+          isLoading={isSubmitting}
+          disableButton={isSubmitting}
         />
       </ScrollView>
     </SettingsScreenRoot>
   );
-}
+};
+
+export default ChangePasswordScreen;

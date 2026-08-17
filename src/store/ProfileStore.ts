@@ -1,53 +1,65 @@
-import { create } from 'zustand';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
+import { persist, type PersistStorage } from "zustand/middleware";
 
 interface UserProfile {
   phoneNumber: string;
-  countryOfResidence:  string;
-  email:  string;
-  fullName:  string;
-  profilePicture:  string;
-  kycVerified: boolean;
-  gender:  string;
-  dateOfBirth: string;
+  email: string;
+  firstName: string;
+  lastName: string;
   isEmailVerified: boolean;
 }
 
 interface ProfileStore {
   userProfile: UserProfile;
-  email: string;
-  setProfile: (profile: UserProfile) => void;
-  setEmail: (email: string) => void;
-  clearProfile: () => void;
+  setProfile: (profile: UserProfile) => Promise<void>;
+  clearProfile: () => Promise<void>;
 }
 
 const defaultUserProfile: UserProfile = {
   phoneNumber: "",
-  countryOfResidence: "",
+  firstName: "",
+  lastName: "",
   email: "",
-  fullName: "",
-  profilePicture: "",
-  kycVerified: false,
-  gender: "",
-  dateOfBirth: "",
-  isEmailVerified: false
+  isEmailVerified: false,
 };
 
-export const useProfileStore = create<ProfileStore>((set) => ({
-  userProfile: defaultUserProfile,
-  email: "",
+type PersistedProfile = Pick<ProfileStore, "userProfile">;
 
-  setProfile: (profile) =>
-    set(() => ({
-      userProfile: profile,
-    })),
+const profileStorage: PersistStorage<PersistedProfile> = {
+  getItem: async (name) => {
+    const storedValue = await AsyncStorage.getItem(name);
+    if (!storedValue) return null;
 
-  setEmail: (email) =>
-    set(() => ({
-      email,
-    })),
+    const parsed = JSON.parse(storedValue);
 
-  clearProfile: () =>
-    set(() => ({
+    // Support profiles saved before the Zustand persist migration.
+    if (parsed?.state?.userProfile) return parsed;
+    return { state: { userProfile: parsed } };
+  },
+  setItem: (name, value) =>
+    AsyncStorage.setItem(name, JSON.stringify(value)),
+  removeItem: (name) => AsyncStorage.removeItem(name),
+};
+
+export const useProfileStore = create<ProfileStore>()(
+  persist(
+    (set) => ({
       userProfile: defaultUserProfile,
-    })),
-}));
+
+      setProfile: async (profile) => {
+        set({ userProfile: profile });
+      },
+
+      clearProfile: async () => {
+        set({ userProfile: defaultUserProfile });
+        await AsyncStorage.removeItem("userProfile");
+      },
+    }),
+    {
+      name: "userProfile",
+      storage: profileStorage,
+      partialize: (state) => ({ userProfile: state.userProfile }),
+    },
+  ),
+);

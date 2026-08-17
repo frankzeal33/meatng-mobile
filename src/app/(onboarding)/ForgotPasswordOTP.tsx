@@ -20,4 +20,4 @@ export default function ForgotPasswordOTP() {
     />
   );
 }
-import type { AuthEmailRouteParams } from "@/types/onboarding";
+import type { AuthEmailRouteParams } from "@/types";

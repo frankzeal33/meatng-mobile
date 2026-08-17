@@ -1,17 +1,20 @@
 import CustomButton from "@/components/CustomButton";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { axiosClient } from "@/globalApi";
 import type { AddonItem } from "@/store/addonStore";
 import { useAddonStore } from "@/store/addonStore";
+import { useAuthStore } from "@/store/AuthStore";
 import type { CartItem } from "@/store/cartStore";
 import { useCartStore } from "@/store/cartStore";
+import { useProfileStore } from "@/store/ProfileStore";
 import { useSubscriptionStore } from "@/store/subscriptionStore";
 import { formatWeight, toGrams } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
@@ -98,6 +101,9 @@ function EditableProductRow({
 export default function ReviewCart() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const email = useProfileStore((state) => state.userProfile.email);
+  const [addingToCart, setAddingToCart] = useState(false);
   const subInfo = useSubscriptionStore((state) => state.subInfo);
   const items = useCartStore((state) => state.items);
   const setQty = useCartStore((state) => state.setQty);
@@ -148,6 +154,47 @@ export default function ReviewCart() {
 
   const decrementAddon = (item: AddonItem) => {
     setAddonQty(item, item.qty - 1);
+  };
+
+  const continueToCheckout = async () => {
+    if (!isAuthenticated) {
+      router.push("/(onboarding)/Register");
+      return;
+    }
+
+    if (!subInfo?.subscription?.id || !email) {
+      toast.show(
+        !email
+          ? "Your email is unavailable. Please sign in again."
+          : "Please select a subscription plan again.",
+        { type: "danger" },
+      );
+      return;
+    }
+
+    const cartItems = [...items, ...addonItems].map((item) => ({
+      productId: item.id,
+      quantity: item.qty,
+      itemType: item.item_type,
+    }));
+
+    try {
+      setAddingToCart(true);
+      await axiosClient.post("/carts/items", {
+        email,
+        planId: subInfo.subscription.id,
+        items: cartItems,
+      });
+      router.push("/(onboarding)/Checkout");
+    } catch (error: any) {
+      toast.show(
+        error.response?.data?.message ??
+          "Unable to save your cart. Please try again.",
+        { type: "danger" },
+      );
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   return (
@@ -300,7 +347,8 @@ export default function ReviewCart() {
 
       <CustomButton
         title="Continue"
-        handlePress={() => router.push("/(onboarding)/Checkout")}
+        handlePress={continueToCheckout}
+        isLoading={addingToCart}
         disableButton={!isBoxComplete}
         containerStyles="mb-1 mt-2 w-full"
         textStyles="text-white"

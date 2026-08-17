@@ -1,4 +1,4 @@
-import type { CatalogProduct, CategoryFilter } from "@/types/catalog";
+import type { CatalogProduct, CategoryFilter } from "@/types";
 
 const chefCuts = require("../../assets/images/onboarding/chef-cuts.png");
 const flexibleBox = require("../../assets/images/onboarding/flexible-box.png");

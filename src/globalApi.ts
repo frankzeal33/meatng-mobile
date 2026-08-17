@@ -1,31 +1,21 @@
-import { useAuthStore } from '@/store/AuthStore';
-import { useProfileStore } from '@/store/ProfileStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { useAuthStore } from "@/store/AuthStore";
+import { useProfileStore } from "@/store/ProfileStore";
+import axios from "axios";
+import { router } from "expo-router";
+
+const mobileHeaders = {
+  "x-client-type": "mobile",
+  "x-mobile-app-key": process.env.EXPO_PUBLIC_MOBILE_APP_KEY,
+};
 
 const axiosClient = axios.create({
-  baseURL: `${process.env.EXPO_PUBLIC_SERVER_URI}`,
+  baseURL: process.env.EXPO_PUBLIC_SERVER_URI,
   withCredentials: true,
+  headers: mobileHeaders,
 });
 
-// Refresh lock to prevent concurrent refresh calls
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-const subscribeTokenRefresh = (cb: (token: string) => void) => {
-  refreshSubscribers.push(cb);
-};
-
-const onRefreshed = (token: string) => {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-};
-
-// Request interceptor — always reads from SecureStore (iOS-safe)
-axiosClient.interceptors.request.use(async (config) => {
-  const accessToken = await SecureStore.getItemAsync('accessToken'); // ← Key fix
+axiosClient.interceptors.request.use((config) => {
+  const accessToken = useAuthStore.getState().token;
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -34,84 +24,75 @@ axiosClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-const UNAUTHORIZED_MESSAGES = new Set([
-  'session expired',
-  'Invalid or expired token',
-  'Please provide a valid authorization token.',
-  'Your session is not valid for this resource.',
-  'Your session has expired. Please log in again.',
-]);
-
-const isUnauthorizedError = (error: any): boolean => {
-  if (error.response?.status !== 401) return false;
-  const { message, error: errField } = error.response?.data || {};
-  return UNAUTHORIZED_MESSAGES.has(message) || UNAUTHORIZED_MESSAGES.has(errField);
+const clearSession = async () => {
+  await Promise.all([
+    useAuthStore.getState().logout(),
+    useProfileStore.getState().clearProfile(),
+  ]);
+  router.replace("/(onboarding)/Login");
 };
 
-const clearSessionAndRedirect = async () => {
-  await SecureStore.deleteItemAsync('accessToken');
-  await SecureStore.deleteItemAsync('refreshToken');
-  await AsyncStorage.removeItem('userProfile');
-  useAuthStore.getState().logout();
-  useProfileStore.getState().clearProfile();
-  router.replace('/(onboarding)/Login');
-};
-
-// Response interceptor with refresh lock
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
+    const message = error.response?.data?.message;
+    const shouldRefresh =
+      status === 401 &&
+      (message === "Invalid access token" ||
+        message === "Access token is required") &&
+      originalRequest &&
+      !originalRequest._retry;
 
-    if (!isUnauthorizedError(error) || originalRequest._retry) {
-      return Promise.reject(error);
-    }
+    if (shouldRefresh) {
+      originalRequest._retry = true;
 
-    originalRequest._retry = true;
+      try {
+        const refreshToken = useAuthStore.getState().refreshToken;
 
-    // If already refreshing, queue this request
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((newToken: string) => {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          resolve(axiosClient(originalRequest));
-        });
-      });
-    }
+        if (!refreshToken) {
+          throw new Error("No refresh token is available.");
+        }
 
-    isRefreshing = true;
+        const response = await axios.post(
+          `${process.env.EXPO_PUBLIC_SERVER_URI}/auth/refresh-token`,
+          { refresh_token: refreshToken },
+          { withCredentials: true, headers: mobileHeaders },
+        );
 
-    try {
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const responseData = response.data;
+        const tokenData = responseData?.data?.attributes?.token
+        const accessToken = tokenData?.accessToken;
+        const newRefreshToken = tokenData?.refreshToken;
 
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
+        if (!accessToken) {
+          throw new Error("The refreshed access token was not returned.");
+        }
+
+        await useAuthStore
+          .getState()
+          .login(accessToken, newRefreshToken ?? undefined);
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        await clearSession();
+        return Promise.reject(refreshError);
       }
-
-      const refreshResponse = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URI}/auth/refresh-token`,
-        { refresh_token: refreshToken }
-      );
-
-      const newAccessToken = refreshResponse.data.accessToken;
-
-      // Persist first, then update memory
-      await SecureStore.setItemAsync('accessToken', newAccessToken);
-      useAuthStore.getState().login(newAccessToken);
-
-      onRefreshed(newAccessToken); // ← Unblock queued requests
-
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-      return axiosClient(originalRequest);
-    } catch (refreshError) {
-      console.error('Failed to refresh token:', refreshError);
-      refreshSubscribers = []; // ← Clear queue on failure
-      await clearSessionAndRedirect();
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false; // ← Always reset lock
     }
-  }
+
+    const shouldLogout =
+      status === 401 &&
+      (message === "Invalid or expired token" ||
+        message === "Access token is required");
+
+    if (shouldLogout) {
+      await clearSession();
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 export { axiosClient };

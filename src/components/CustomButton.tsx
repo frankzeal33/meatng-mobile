@@ -1,4 +1,4 @@
-import type { CustomButtonProps } from "@/types/components";
+import type { CustomButtonProps } from "@/types";
 import { TouchableOpacity, Text } from "react-native";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 

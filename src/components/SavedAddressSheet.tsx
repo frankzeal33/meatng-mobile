@@ -1,4 +1,4 @@
-import type { CustomBottomSheetRef } from "@/types/components";
+import type { CustomBottomSheetRef } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { forwardRef, useMemo } from "react";
@@ -9,6 +9,7 @@ export type SavedAddress = {
   id: string;
   label: string;
   recipient: string;
+  email?: string;
   phone: string;
   streetAddress: string;
   apartment: string;
@@ -18,52 +19,18 @@ export type SavedAddress = {
 };
 
 type SavedAddressSheetProps = {
+  addresses?: SavedAddress[];
   selectedAddressId?: string;
   onSelect: (address: SavedAddress) => void;
+  onEnterManually?: () => void;
 };
 
 export const SAVED_ADDRESS_PLACEHOLDER = "Select a saved address";
 
-const DUMMY_ADDRESSES: SavedAddress[] = [
-  {
-    id: "home",
-    label: "Home",
-    recipient: "Adebola Okonkwo",
-    phone: "08123456789",
-    streetAddress: "12 Adeniyi Jones Avenue",
-    apartment: "First Floor",
-    deliveryArea: "Ikeja",
-    state: "Lagos",
-    zipCode: "100271",
-  },
-  {
-    id: "office",
-    label: "Office",
-    recipient: "Adebola Okonkwo",
-    phone: "08123456789",
-    streetAddress: "18 Admiralty Way",
-    apartment: "Suite 4B",
-    deliveryArea: "Lekki",
-    state: "Lagos",
-    zipCode: "106104",
-  },
-  {
-    id: "family",
-    label: "Family House",
-    recipient: "Chidi Okonkwo",
-    phone: "08034567890",
-    streetAddress: "7 Unity Crescent",
-    apartment: "",
-    deliveryArea: "Victoria Island",
-    state: "Lagos",
-    zipCode: "101241",
-  },
-];
-
 const SavedAddressSheet = forwardRef<
   CustomBottomSheetRef,
   SavedAddressSheetProps
->(({ selectedAddressId, onSelect }, ref) => {
+>(({ addresses = [], selectedAddressId, onSelect, onEnterManually }, ref) => {
   const snapPoints = useMemo(() => ["90%"], []);
 
   return (
@@ -79,10 +46,28 @@ const SavedAddressSheet = forwardRef<
           Choose an address for this delivery.
         </Text>
         <BottomSheetFlatList
-          data={DUMMY_ADDRESSES}
+          data={addresses}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
+          ListHeaderComponent={
+            onEnterManually ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onEnterManually}
+                className="mb-3 rounded-lg border border-gray-200 bg-white p-4 active:opacity-80"
+              >
+                <Text className="font-msbold text-base text-green">
+                  Enter address manually
+                </Text>
+              </Pressable>
+            ) : null
+          }
+          ListEmptyComponent={
+            <Text className="py-8 text-center font-mregular text-sm text-gray">
+              You have no saved addresses yet.
+            </Text>
+          }
           renderItem={({ item }) => {
             const isSelected = selectedAddressId === item.id;
 

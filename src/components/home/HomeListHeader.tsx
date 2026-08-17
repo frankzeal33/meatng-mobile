@@ -1,4 +1,4 @@
-import type { HomeListHeaderProps } from "@/types/home";
+import type { HomeListHeaderProps } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
@@ -6,6 +6,7 @@ import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 export default function HomeListHeader({
   title,
   subtitle,
+  searchPlaceholder = "Search by order type or reference...",
   filters,
   selectedFilter,
   searchValue,
@@ -34,7 +35,7 @@ export default function HomeListHeader({
         <TextInput
           value={searchValue}
           onChangeText={onSearchChange}
-          placeholder="Search for order type or reference......"
+          placeholder={searchPlaceholder}
           placeholderTextColor="#A3A3A3"
           className="ml-3 h-full flex-1 font-mregular text-xs text-black"
         />

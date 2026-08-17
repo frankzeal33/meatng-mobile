@@ -3,7 +3,7 @@ import {
   lagosAreas,
   ogunAreas,
 } from "@/data/deliveryZones";
-import type { CustomBottomSheetRef } from "@/types/components";
+import type { CustomBottomSheetRef } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomSheetFlatList,

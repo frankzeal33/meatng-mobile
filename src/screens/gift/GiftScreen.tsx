@@ -1,97 +1,58 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
 import CustomButton from "@/components/CustomButton";
+import RetryButton from "@/components/RetryButton";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { axiosClient } from "@/globalApi";
 import type {
   GiftBox,
   GiftBoxCardProps,
   GiftBoxListItemProps,
   GiftIncludedCutListItemProps,
   GiftScreenProps,
-} from "@/types/gift";
+} from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetFlatList, BottomSheetModal } from "@gorhom/bottom-sheet";
 import { Image as ExpoImage } from "expo-image";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import displayCurrency from "@/utils/displayCurrency";
 
 const giftBoxImage = require("../../../assets/images/onboarding/flexible-box.png");
 
-const giftBoxes: GiftBox[] = [
-  {
-    id: "classic",
-    name: "The Classic Box",
-    description:
-      "A mix of fresh beef, chicken, and assorted cuts delivered to your door, everything someone needs to cook a proper Nigerian meal, all in one box.",
-    weight: "3kg box",
-    price: "₦15,000.00",
-    image: giftBoxImage,
-    includedCuts: [
-      { id: "classic-boneless", name: "Boneless Beef - 1kg", quantity: "1x" },
-      { id: "classic-bone-in", name: "Bone in Beef - 1kg", quantity: "1x" },
-      {
-        id: "classic-laps",
-        name: "Chicken Laps (500g) - 500g",
-        quantity: "1x",
-      },
-      {
-        id: "classic-wings",
-        name: "Chicken Wings (500g) - 500g",
-        quantity: "1x",
-      },
-    ],
-  },
-  {
-    id: "celebration",
-    name: "Celebration Box",
-    description:
-      "More meat, more variety, a generous mix of premium beef and chicken cuts made for celebrations and sharing.",
-    weight: "4kg box",
-    price: "₦25,000.00",
-    image: giftBoxImage,
-    includedCuts: [
-      {
-        id: "celebration-boneless",
-        name: "Boneless Beef - 1kg",
-        quantity: "1x",
-      },
-      { id: "celebration-bone-in", name: "Bone in Beef - 1kg", quantity: "1x" },
-      {
-        id: "celebration-laps",
-        name: "Chicken Laps (500g) - 500g",
-        quantity: "1x",
-      },
-      {
-        id: "celebration-wings",
-        name: "Chicken Wings (500g) - 500g",
-        quantity: "1x",
-      },
-      { id: "celebration-liver", name: "Liver - 100g", quantity: "2x" },
-      { id: "celebration-shaki", name: "Shaki (Tripe) - 100g", quantity: "2x" },
-      { id: "celebration-gizzards", name: "Gizzards - 100g", quantity: "2x" },
-      { id: "celebration-ponmo", name: "Ponmo (White) - 200g", quantity: "2x" },
-    ],
-  },
-  {
-    id: "family",
-    name: "Family Feast Box",
-    description:
-      "A hearty selection of fresh cuts for family meals, weekend cooking, and memorable moments together.",
-    weight: "10kg box",
-    price: "₦50,000.00",
-    image: giftBoxImage,
-    includedCuts: [
-      { id: "family-boneless", name: "Boneless Beef - 1kg", quantity: "2x" },
-      { id: "family-bone-in", name: "Bone in Beef - 1kg", quantity: "2x" },
-      { id: "family-chicken", name: "Whole Chicken - 1.5kg", quantity: "2x" },
-      { id: "family-laps", name: "Chicken Laps - 1kg", quantity: "2x" },
-      { id: "family-offal", name: "Assorted Offal - 1kg", quantity: "1x" },
-    ],
-  },
-];
+const mapGiftBox = (item: any): GiftBox => {
+  const attributes = item.attributes ?? {};
+  return {
+    id: String(item.id),
+    name: attributes.name ?? "Gift Box",
+    description: attributes.description ?? "",
+    weight: `${attributes.weight ?? "-"}${attributes.weight_unit ?? ""}`,
+    price: displayCurrency(Number(attributes.price ?? 0), "NGN"),
+    image: attributes.image ? { uri: attributes.image } : giftBoxImage,
+    includedCuts: (attributes.products ?? []).map((line: any, index: number) => {
+      const product = line.product_id ?? {};
+      const weight =
+        line.weight !== undefined
+          ? `${line.weight}${line.weight_unit ?? ""}`
+          : product.formattedWeight ?? "";
+      return {
+        id: String(product._id ?? product.id ?? `${item.id}-${index}`),
+        name: `${product.name ?? "Item"}${weight ? ` - ${weight}` : ""}`,
+        quantity: `${line.quantity ?? 1}x`,
+      };
+    }),
+  };
+};
 
 const GiftBoxCard = memo(function GiftBoxCard({
   item,
@@ -133,7 +94,33 @@ export default function GiftScreen({ variant = "tab" }: GiftScreenProps) {
   const previewModalRef = useRef<BottomSheetModal>(null);
   const pendingRecipientGiftRef = useRef<GiftBox | null>(null);
   const previewSnapPoints = useMemo(() => ["90%"], []);
+  const [giftBoxes, setGiftBoxes] = useState<GiftBox[]>([]);
   const [selectedGift, setSelectedGift] = useState<GiftBox | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchGiftBoxes = useCallback(async (isRefresh = false) => {
+    try {
+      isRefresh ? setRefreshing(true) : setInitialLoading(true);
+      setError(null);
+      const response = await axiosClient.get("/giftboxes/active");
+      setGiftBoxes((response.data?.data ?? []).map(mapGiftBox));
+    } catch (requestError: any) {
+      setGiftBoxes([]);
+      setError(
+        requestError.response?.data?.message ??
+          "Something went wrong while fetching gift boxes. Please try again.",
+      );
+    } finally {
+      setInitialLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchGiftBoxes();
+  }, [fetchGiftBoxes]);
 
   const handleSelectGift = useCallback((giftBox: GiftBox) => {
     setSelectedGift(giftBox);
@@ -208,11 +195,27 @@ export default function GiftScreen({ variant = "tab" }: GiftScreenProps) {
         />
       )}
 
-      <FlatList
+      {initialLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#218225" />
+          <Text className="mt-2 font-mregular text-xs text-gray">
+            Loading gifts...
+          </Text>
+        </View>
+      ) : (
+        <FlatList
         data={giftBoxes}
         renderItem={renderGiftBox}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void fetchGiftBoxes(true)}
+            colors={["#218225"]}
+            tintColor="#218225"
+          />
+        }
         contentContainerStyle={{
           gap: 20,
           paddingTop: isTab ? 16 : 12,
@@ -227,7 +230,28 @@ export default function GiftScreen({ variant = "tab" }: GiftScreenProps) {
             </Text>
           </View>
         }
-      />
+        ListEmptyComponent={
+          <View className="min-h-96 items-center justify-center px-6">
+            <Ionicons
+              name={error ? "gift-outline" : "cube-outline"}
+              size={34}
+              color="#8E8E8E"
+            />
+            <Text className="mt-4 text-center font-mbold text-lg">
+              {error ? "Couldn't load gift boxes" : "No gift boxes found"}
+            </Text>
+            <Text className="mt-2 text-center font-mregular text-sm leading-6 text-gray">
+              {error ??
+                "There are no gift boxes available right now. Please check back later."}
+            </Text>
+            <RetryButton
+              onPress={() => void fetchGiftBoxes()}
+              containerStyles="mt-5"
+            />
+          </View>
+        }
+        />
+      )}
 
       <CustomButtomSheet
         ref={previewModalRef}

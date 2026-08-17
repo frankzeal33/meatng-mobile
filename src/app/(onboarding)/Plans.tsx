@@ -1,6 +1,7 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
 import CustomButton from "@/components/CustomButton";
 import PlanCard from "@/components/PlanCard";
+import RetryButton from "@/components/RetryButton";
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import { axiosClient } from "@/globalApi";
@@ -10,13 +11,13 @@ import {
   type Plan as ApiPlanRecord,
   useSubscriptionStore,
 } from "@/store/subscriptionStore";
-import type { PlanType } from "@/types/general";
+import type { PlanType } from "@/types";
 import type {
   DeliveryFrequency,
   DeliveryFrequencyListItemProps,
   PlanListItemProps,
   PlansScreenProps,
-} from "@/types/onboarding";
+} from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomSheetFlatList,
@@ -252,7 +253,10 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
 
       {loading && (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#218225" />
+          <ActivityIndicator color="#218225" />
+          <Text className="mt-2 font-mregular text-xs text-gray">
+            Loading plans...
+          </Text>
         </View>
       )}
 
@@ -296,11 +300,9 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
                   ? "Something went wrong while fetching subscription plans. Please try again."
                   : "There are no subscription plans available right now. Please check back later."}
               </Text>
-              <CustomButton
-                title="Retry"
-                handlePress={() => void fetchPlans()}
-                containerStyles="mt-6 px-8"
-                textStyles="text-white"
+              <RetryButton
+                onPress={() => void fetchPlans()}
+                containerStyles="mt-5"
               />
             </View>
           }

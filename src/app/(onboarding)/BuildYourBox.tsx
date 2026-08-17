@@ -14,7 +14,7 @@ import type {
   CatalogProductListItemProps,
   CategoryFilter,
   StickyControlsProps,
-} from "@/types/catalog";
+} from "@/types";
 import { formatWeight, toGrams } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
 import { formatEnums } from "@/utils/formatEnums";

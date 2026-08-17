@@ -1,7 +1,7 @@
 import type {
   OnboardingSlide,
   OnboardingSlideViewProps,
-} from "@/types/onboarding";
+} from "@/types";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useRef, useState } from "react";

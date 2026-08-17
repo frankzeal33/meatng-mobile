@@ -1,4 +1,4 @@
-import type { SpaceBetweenHeaderProps } from "@/types/components";
+import type { SpaceBetweenHeaderProps } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 

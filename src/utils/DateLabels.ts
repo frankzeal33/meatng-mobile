@@ -21,3 +21,13 @@ export const DateLabels = (date: any) => {
 
   return format(inputDate, "dd MMM yyyy 'at' hh:mm a"); // e.g. "22 Sep 2024 at 02:30 PM"
 };
+
+export const formatDate = (
+  value: string | null,
+  pattern: string,
+) => {
+  if (!value) return "None";
+
+  const date = new Date(value);
+  return isValid(date) ? format(date, pattern) : "None";
+};

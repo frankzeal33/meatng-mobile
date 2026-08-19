@@ -2,7 +2,7 @@ import {
   deliveryStates,
   lagosAreas,
   ogunAreas,
-} from "@/data/deliveryZones";
+} from "@/constants/data";
 import type { CustomBottomSheetRef } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import {

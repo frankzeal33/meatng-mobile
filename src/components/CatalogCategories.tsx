@@ -1,4 +1,4 @@
-import { catalogCategories } from "@/data/meatCatalog";
+import { catalogCategories } from "@/constants/data";
 import type { CatalogCategoriesProps } from "@/types";
 import { memo } from "react";
 import { Pressable, ScrollView, Text } from "react-native";
@@ -24,7 +24,8 @@ function CatalogCategories({
       contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
     >
       {options.map((category) => {
-        const isActive = activeCategory === category.value;
+        const isActive =
+          activeCategory === category.value || activeCategory === category.id;
 
         return (
           <Pressable

@@ -41,7 +41,8 @@ axiosClient.interceptors.response.use(
     const shouldRefresh =
       status === 401 &&
       (message === "Invalid access token" ||
-        message === "Access token is required") &&
+        message === "Access token is required" ||
+        message === "Invalid or expired access token") &&
       originalRequest &&
       !originalRequest._retry;
 
@@ -85,7 +86,8 @@ axiosClient.interceptors.response.use(
     const shouldLogout =
       status === 401 &&
       (message === "Invalid or expired token" ||
-        message === "Access token is required");
+        message === "Access token is required" ||
+        message === "Invalid or expired access token");
 
     if (shouldLogout) {
       await clearSession();

@@ -20,13 +20,20 @@ export type AuthEmailRouteParams = {
   email?: string;
 };
 
+export type PasswordResetRouteParams = {
+  requestId?: string;
+  token?: string;
+};
+
 // Shared components
 export type AuthOtpScreenProps = {
   title: string;
   description: string;
   email?: string;
   buttonTitle?: string;
+  numberOfDigits?: number;
   onConfirm: (otp: string) => void;
+  onResend?: () => void | Promise<void>;
 };
 
 export type CountDownProps = {
@@ -255,6 +262,7 @@ export type OnboardingSlideViewProps = OnboardingSlide & {
   currentIndex: number;
   skipOpacity: Animated.Value;
   onGetStarted: () => void;
+  onLogin: () => void;
   onGoToSlide: (index: number) => void;
   onSkip: () => void;
 };

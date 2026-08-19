@@ -1,6 +1,9 @@
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
+import { axiosClient } from "@/globalApi";
+import { hideLoader, showLoader, useIsLoading } from "@/store/LoaderStore";
+import type { AuthEmailRouteParams } from "@/types";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
@@ -12,10 +15,81 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useToast } from "react-native-toast-notifications";
+import z from "zod";
+
+const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email address is required")
+    .pipe(z.email({ error: "Enter a valid email address" })),
+});
+
+type ForgotPasswordForm = z.input<typeof forgotPasswordSchema>;
+type ForgotPasswordField = keyof ForgotPasswordForm;
 
 export default function ForgotPassword() {
   const params = useLocalSearchParams<AuthEmailRouteParams>();
-  const [form, setForm] = useState({ email: params.email ?? "" });
+  const toast = useToast();
+  const isLoading = useIsLoading();
+  const [form, setForm] = useState<ForgotPasswordForm>({
+    email: params.email ?? "",
+  });
+  const [touched, setTouched] = useState<
+    Partial<Record<ForgotPasswordField, boolean>>
+  >({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const validation = forgotPasswordSchema.safeParse(form);
+  const errors = validation.success
+    ? {}
+    : validation.error.issues.reduce<
+        Partial<Record<ForgotPasswordField, string>>
+      >((fieldErrors, issue) => {
+        const field = issue.path[0] as ForgotPasswordField;
+        fieldErrors[field] ??= issue.message;
+        return fieldErrors;
+      }, {});
+
+  const fieldError = (field: ForgotPasswordField) =>
+    touched[field] || hasSubmitted ? errors[field] : undefined;
+
+  const updateField = (field: ForgotPasswordField, value: string) =>
+    setForm((current) => ({ ...current, [field]: value }));
+
+  const touchField = (field: ForgotPasswordField) =>
+    setTouched((current) => ({ ...current, [field]: true }));
+
+  const handleForgotEmail = async () => {
+    setHasSubmitted(true);
+    if (!validation.success || isLoading) return;
+
+    try {
+      showLoader();
+      const response = await axiosClient.post("/auth/forgot-password", {
+        email: validation.data.email,
+      });
+
+      toast.show(
+        response.data?.data?.attributes?.message ??
+          "Reset code sent to your email.",
+        { type: "success" },
+      );
+      router.push({
+        pathname: "/(onboarding)/ForgotPasswordOTP",
+        params: { email: validation.data.email },
+      });
+    } catch (error: any) {
+      toast.show(
+        error.response?.data?.message ??
+          "Unable to send the reset code. Please try again.",
+        { type: "danger" },
+      );
+    } finally {
+      hideLoader();
+    }
+  };
 
   return (
     <SafeAreaView className="bg-background" edges={["top"]} style={{ flex: 1 }}>
@@ -51,7 +125,9 @@ export default function ForgotPassword() {
               title="Email Address"
               value={form.email}
               placeholder="you@example.com"
-              handleChangeText={(email) => setForm({ email })}
+              handleChangeText={(value) => updateField("email", value)}
+              onBlur={() => touchField("email")}
+              error={fieldError("email")}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -59,13 +135,8 @@ export default function ForgotPassword() {
 
             <CustomButton
               title="Send reset code"
-              handlePress={() =>
-                router.push({
-                  pathname: "/(onboarding)/ForgotPasswordOTP",
-                  params: { email: form.email },
-                })
-              }
-              disableButton={!form.email.trim()}
+              handlePress={handleForgotEmail}
+              disableButton={isLoading}
               containerStyles="mt-8 w-full"
               textStyles="text-white"
             />
@@ -75,4 +146,3 @@ export default function ForgotPassword() {
     </SafeAreaView>
   );
 }
-import type { AuthEmailRouteParams } from "@/types";

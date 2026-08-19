@@ -20,11 +20,12 @@ import {
 } from "react-native-reanimated-carousel";
 import { router } from "expo-router";
 import CustomButton from "@/components/CustomButton";
+import images from "@/constants/images";
 
 const slides: OnboardingSlide[] = [
   {
     id: "chef-cuts",
-    image: require("../../../assets/images/onboarding/chef-cuts.png"),
+    image: images.onboarding1,
     titleAccent: "Chef-grade cuts",
     titleRest: "curated for flavor",
     description:
@@ -32,7 +33,7 @@ const slides: OnboardingSlide[] = [
   },
   {
     id: "flexible-box",
-    image: require("../../../assets/images/onboarding/flexible-box.png"),
+    image: images.onboarding2,
     titleAccent: "Flexible monthly",
     titleRest: "boxes you control",
     description:
@@ -40,7 +41,7 @@ const slides: OnboardingSlide[] = [
   },
   {
     id: "meat-lovers",
-    image: require("../../../assets/images/onboarding/meat-lovers.png"),
+    image: images.onboarding3,
     titleAccent: "Meat Lovers Club",
     titleRest: "access included",
     description:
@@ -66,6 +67,7 @@ function OnboardingSlideView({
   currentIndex,
   skipOpacity,
   onGetStarted,
+  onLogin,
   onGoToSlide,
   onSkip,
 }: OnboardingSlideViewProps) {
@@ -129,13 +131,13 @@ function OnboardingSlideView({
       <View className="z-20 gap-4">
         <CustomButton
           title="Get Started"
-          handlePress={() => router.push("/(onboarding)/Plans")}
+          handlePress={onGetStarted}
           containerStyles="w-full"
           textStyles="text-white"
         />
         <CustomButton
           title="Log In"
-          handlePress={() => router.push("/(onboarding)/Login")}
+          handlePress={onLogin}
           containerStyles="w-full bg-white border border-green"
           textStyles="text-green"
         />
@@ -169,10 +171,12 @@ export default function Index() {
   }, []);
 
   const handleGetStarted = useCallback(() => {
-    if (currentIndex < slides.length - 1) {
-      goToSlide(currentIndex + 1);
-    }
-  }, [currentIndex, goToSlide]);
+    router.replace("/(onboarding)/Plans");
+  }, []);
+
+  const handleLogin = useCallback(() => {
+    router.replace("/(onboarding)/Login");
+  }, []);
 
   const handleSkip = useCallback(() => {
     Animated.timing(skipOpacity, {
@@ -224,6 +228,7 @@ export default function Index() {
             currentIndex={currentIndex}
             skipOpacity={skipOpacity}
             onGetStarted={handleGetStarted}
+            onLogin={handleLogin}
             onGoToSlide={goToSlide}
             onSkip={handleSkip}
           />

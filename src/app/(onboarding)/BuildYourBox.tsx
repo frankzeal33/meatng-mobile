@@ -20,7 +20,7 @@ import displayCurrency from "@/utils/displayCurrency";
 import { formatEnums } from "@/utils/formatEnums";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetFlatList, BottomSheetModal } from "@gorhom/bottom-sheet";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -141,6 +141,7 @@ const StickyControls = memo(function StickyControls({
 export default function BuildYourBox() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { categoryId } = useLocalSearchParams<{ categoryId?: string }>();
   const subInfo = useSubscriptionStore((state) => state.subInfo);
   const attributes = subInfo?.subscription?.attributes;
   const items = useCartStore((state) => state.items);
@@ -153,7 +154,8 @@ export default function BuildYourBox() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [categories, setCategories] = useState<CatalogCategoryOption[]>([]);
   const [activeCategory, setActiveCategory] =
-    useState<CategoryFilter>("all");
+    useState<CategoryFilter>(() => categoryId ?? "all");
+  const [hasChangedCategory, setHasChangedCategory] = useState(false);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState<ProductMeta | null>(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -248,7 +250,9 @@ export default function BuildYourBox() {
         setProductError(false);
         let url = `/products?page=${requestedPage}&limit=30`;
 
-        if (activeCategory !== "all") {
+        if (categoryId && !hasChangedCategory) {
+          url += `&categoryId=${encodeURIComponent(categoryId)}`;
+        } else if (activeCategory !== "all") {
           url += `&categorySlug=${encodeURIComponent(activeCategory)}`;
         }
         const response = await axiosClient.get<{
@@ -271,7 +275,7 @@ export default function BuildYourBox() {
         setLoadingMore(false);
       }
     },
-    [activeCategory, remainingWeightInGrams],
+    [activeCategory, categoryId, hasChangedCategory, remainingWeightInGrams],
   );
 
   useEffect(() => {
@@ -308,6 +312,7 @@ export default function BuildYourBox() {
   };
 
   const changeCategory = (category: CategoryFilter) => {
+    setHasChangedCategory(true);
     setActiveCategory(category);
     setPage(1);
   };

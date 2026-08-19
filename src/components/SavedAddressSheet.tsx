@@ -2,8 +2,9 @@ import type { CustomBottomSheetRef } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { forwardRef, useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import CustomButtomSheet from "./CustomButtomSheet";
+import RetryButton from "./RetryButton";
 
 export type SavedAddress = {
   id: string;
@@ -23,6 +24,9 @@ type SavedAddressSheetProps = {
   selectedAddressId?: string;
   onSelect: (address: SavedAddress) => void;
   onEnterManually?: () => void;
+  refreshing?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 };
 
 export const SAVED_ADDRESS_PLACEHOLDER = "Select a saved address";
@@ -30,7 +34,16 @@ export const SAVED_ADDRESS_PLACEHOLDER = "Select a saved address";
 const SavedAddressSheet = forwardRef<
   CustomBottomSheetRef,
   SavedAddressSheetProps
->(({ addresses = [], selectedAddressId, onSelect, onEnterManually }, ref) => {
+>(
+  ({
+    addresses = [],
+    selectedAddressId,
+    onSelect,
+    onEnterManually,
+    refreshing = false,
+    error,
+    onRefresh,
+  }, ref) => {
   const snapPoints = useMemo(() => ["90%"], []);
 
   return (
@@ -41,12 +54,32 @@ const SavedAddressSheet = forwardRef<
       scrollable
     >
       <View className="h-full">
-        <Text className="mb-1 font-mbold text-2xl">Saved addresses</Text>
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="flex-1 font-mbold text-2xl">Saved addresses</Text>
+          {onRefresh ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Refresh saved addresses"
+              accessibilityState={{ disabled: refreshing }}
+              disabled={refreshing}
+              onPress={onRefresh}
+              className="h-10 w-10 items-center justify-center rounded-full bg-green-light active:opacity-70"
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color="#218225" />
+              ) : (
+                <Ionicons name="refresh" size={21} color="#218225" />
+              )}
+            </Pressable>
+          ) : null}
+        </View>
         <Text className="mb-4 font-mregular text-sm text-gray">
           Choose an address for this delivery.
         </Text>
         <BottomSheetFlatList
           data={addresses}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
@@ -64,9 +97,29 @@ const SavedAddressSheet = forwardRef<
             ) : null
           }
           ListEmptyComponent={
-            <Text className="py-8 text-center font-mregular text-sm text-gray">
-              You have no saved addresses yet.
-            </Text>
+            error ? (
+              <View className="items-center px-4 py-8">
+                <Ionicons name="cloud-offline-outline" size={30} color="#B52227" />
+                <Text className="mt-3 text-center font-mregular text-sm leading-5 text-gray">
+                  {error}
+                </Text>
+                {onRefresh ? (
+                  <RetryButton
+                    onPress={onRefresh}
+                    label="Retry"
+                    containerStyles="mt-4"
+                  />
+                ) : null}
+              </View>
+            ) : refreshing ? (
+              <View className="items-center py-8">
+                <ActivityIndicator size="small" color="#218225" />
+              </View>
+            ) : (
+              <Text className="py-8 text-center font-mregular text-sm text-gray">
+                You have no saved addresses yet.
+              </Text>
+            )
           }
           renderItem={({ item }) => {
             const isSelected = selectedAddressId === item.id;
@@ -110,7 +163,8 @@ const SavedAddressSheet = forwardRef<
       </View>
     </CustomButtomSheet>
   );
-});
+  },
+);
 
 SavedAddressSheet.displayName = "SavedAddressSheet";
 

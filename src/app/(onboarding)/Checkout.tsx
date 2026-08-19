@@ -13,7 +13,7 @@ import SavedAddressSheet, {
 import SpaceBetween from "@/components/SpaceBetween";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import TextArea from "@/components/TextArea";
-import { getDeliveryState } from "@/data/deliveryZones";
+import { getDeliveryState } from "@/constants/data";
 import { axiosClient } from "@/globalApi";
 import { useProfileStore } from "@/store/ProfileStore";
 import { useSubscriptionStore } from "@/store/subscriptionStore";
@@ -125,6 +125,8 @@ const Checkout = () => {
   const summarySnapPoints = useMemo(() => ["90%"], []);
 
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [form, setForm] = useState<CheckoutForm>({
     firstName: profile.firstName,
@@ -177,12 +179,31 @@ const Checkout = () => {
     if (addressChanged) clearResolvedAddress();
   };
 
+  const loadAddresses = useCallback(async () => {
+    try {
+      setLoadingAddresses(true);
+      setAddressError(null);
+      const response = await axiosClient.get("/addresses");
+      setAddresses(
+        ((response.data?.data ?? []) as ApiAddress[]).map(mapAddress),
+      );
+    } catch (error: any) {
+      setAddresses([]);
+      setAddressError(
+        error.response?.data?.message ??
+          "Unable to load your saved addresses. Please try again.",
+      );
+    } finally {
+      setLoadingAddresses(false);
+    }
+  }, []);
+
   const loadCheckout = useCallback(async () => {
     try {
       setLoadingData(true);
       setLoadError(null);
-      const [addressResponse, cartResponse] = await Promise.all([
-        axiosClient.get("/addresses"),
+      const [, cartResponse] = await Promise.all([
+        loadAddresses(),
         axiosClient.get("/carts/my-cart"),
       ]);
       const checkoutCart = cartResponse.data?.data ?? null;
@@ -191,9 +212,6 @@ const Checkout = () => {
         throw new Error("Your cart could not be found. Please review your cart and try again.");
       }
 
-      setAddresses(
-        ((addressResponse.data?.data ?? []) as ApiAddress[]).map(mapAddress),
-      );
       setCart(checkoutCart);
     } catch (error: any) {
       setCart(null);
@@ -205,7 +223,7 @@ const Checkout = () => {
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  }, [loadAddresses]);
 
   useEffect(() => {
     if (!subInfo?.subscription || !subInfo.selectedFrequency) {
@@ -458,7 +476,16 @@ const Checkout = () => {
         ) : null}
       </KeyboardAvoidingView>
 
-      <SavedAddressSheet addresses={addresses} ref={savedAddressRef} selectedAddressId={selectedAddressId} onSelect={selectSavedAddress} onEnterManually={enterAddressManually} />
+      <SavedAddressSheet
+        addresses={addresses}
+        ref={savedAddressRef}
+        selectedAddressId={selectedAddressId}
+        onSelect={selectSavedAddress}
+        onEnterManually={enterAddressManually}
+        refreshing={loadingAddresses}
+        error={addressError}
+        onRefresh={() => void loadAddresses()}
+      />
       <StatePickerSheet ref={statePickerRef} selectedState={form.state} onSelect={(value) => { setForm((current) => ({ ...current, state: value, city: "" })); clearResolvedAddress(); statePickerRef.current?.dismiss(); }} />
       <AreaPickerSheet ref={areaPickerRef} state={form.state} selectedArea={form.city} onSelect={(value) => { updateForm("city", value, true); areaPickerRef.current?.dismiss(); }} />
 
@@ -489,18 +516,6 @@ const Checkout = () => {
                       />
                     ))}
                   </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => {
-                      summaryRef.current?.dismiss();
-                      router.dismissTo("/(onboarding)/BuildYourBox");
-                    }}
-                    className="mt-3 self-start active:opacity-70"
-                  >
-                    <Text className="font-msbold text-xs text-green">
-                      Edit full box
-                    </Text>
-                  </Pressable>
                 </View>
               )}
 

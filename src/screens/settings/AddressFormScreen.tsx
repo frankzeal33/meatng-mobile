@@ -9,7 +9,7 @@ import {
   SettingsHeader,
   SettingsScreenRoot,
 } from "@/components/settings/SettingsShell";
-import { getDeliveryState } from "@/data/deliveryZones";
+import { getDeliveryState } from "@/constants/data";
 import { axiosClient } from "@/globalApi";
 import type {
   AddressForm,

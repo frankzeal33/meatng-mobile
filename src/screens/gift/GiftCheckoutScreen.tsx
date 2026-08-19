@@ -148,6 +148,8 @@ const GiftCheckoutScreen = () => {
   });
   const [giftBox, setGiftBox] = useState<GiftBoxDetails | null>(null);
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [resolvedAddressId, setResolvedAddressId] = useState("");
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -190,6 +192,25 @@ const GiftCheckoutScreen = () => {
     if (addressChanged) clearResolvedAddress();
   };
 
+  const loadAddresses = useCallback(async () => {
+    try {
+      setLoadingAddresses(true);
+      setAddressError(null);
+      const response = await axiosClient.get("/addresses");
+      setAddresses(
+        ((response.data?.data ?? []) as ApiAddress[]).map(mapAddress),
+      );
+    } catch (error: any) {
+      setAddresses([]);
+      setAddressError(
+        error.response?.data?.message ??
+          "Unable to load your saved addresses. Please try again.",
+      );
+    } finally {
+      setLoadingAddresses(false);
+    }
+  }, []);
+
   const loadCheckout = useCallback(async () => {
     if (!params.giftId) {
       setLoadError("The selected gift box is unavailable. Please choose it again.");
@@ -200,16 +221,13 @@ const GiftCheckoutScreen = () => {
     try {
       setInitialLoading(true);
       setLoadError(null);
-      const [addressResponse, giftResponse] = await Promise.all([
-        axiosClient.get("/addresses"),
+      const [, giftResponse] = await Promise.all([
+        loadAddresses(),
         axiosClient.get(`/giftboxes/${params.giftId}`),
       ]);
       const giftData = giftResponse.data?.data;
       if (!giftData) throw new Error("The selected gift box could not be found.");
 
-      setAddresses(
-        ((addressResponse.data?.data ?? []) as ApiAddress[]).map(mapAddress),
-      );
       setGiftBox(mapGiftBox(giftData));
     } catch (error: any) {
       setGiftBox(null);
@@ -221,7 +239,7 @@ const GiftCheckoutScreen = () => {
     } finally {
       setInitialLoading(false);
     }
-  }, [params.giftId]);
+  }, [loadAddresses, params.giftId]);
 
   useEffect(() => {
     void loadCheckout();
@@ -437,7 +455,16 @@ const GiftCheckoutScreen = () => {
         ) : null}
       </KeyboardAvoidingView>
 
-      <SavedAddressSheet addresses={addresses} ref={savedAddressRef} selectedAddressId={selectedAddressId} onSelect={selectSavedAddress} onEnterManually={enterAddressManually} />
+      <SavedAddressSheet
+        addresses={addresses}
+        ref={savedAddressRef}
+        selectedAddressId={selectedAddressId}
+        onSelect={selectSavedAddress}
+        onEnterManually={enterAddressManually}
+        refreshing={loadingAddresses}
+        error={addressError}
+        onRefresh={() => void loadAddresses()}
+      />
       <StatePickerSheet ref={statePickerRef} selectedState={form.state} onSelect={selectState} />
       <AreaPickerSheet ref={areaPickerRef} state={form.state} selectedArea={form.deliveryArea} onSelect={selectDeliveryArea} />
 

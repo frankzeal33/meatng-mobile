@@ -53,6 +53,8 @@ export default function PrebuiltBox() {
   const planName = attributes?.name ?? "Subscription Plan";
   const weight = `${attributes?.weight ?? 0}${attributes?.weight_unit ?? "kg"}`;
   const frequency = formatEnums(subInfo?.selectedFrequency ?? "weekly");
+  const remainingWeight = attributes?.remaining_weight ?? 0;
+  const categoryId = attributes?.category_rules?.[0]?.category_id;
   const preBuiltItems: PreBuiltItemType[] =
     attributes?.prefilled_items?.map((item) => ({
       id: item?.product_id,
@@ -61,6 +63,21 @@ export default function PrebuiltBox() {
       quantity: item?.quantity,
       image: item?.image_url,
     })) ?? [];
+
+  const handleContinue = () => {
+    if (remainingWeight > 0) {
+      if (categoryId) {
+        router.push({
+          pathname: "/(onboarding)/BuildYourBox",
+          params: { categoryId },
+        });
+      } else {
+        router.push("/(onboarding)/BuildYourBox");
+      }
+    } else {
+      router.push("/(onboarding)/AddOns");
+    }
+  };
 
   return (
     <View
@@ -122,7 +139,7 @@ export default function PrebuiltBox() {
 
       <CustomButton
         title="Continue"
-        handlePress={() => router.push("/(onboarding)/BuildYourBox")}
+        handlePress={handleContinue}
         containerStyles="mb-2 mt-4 w-full"
         textStyles="text-white"
       />

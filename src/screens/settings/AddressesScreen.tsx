@@ -236,6 +236,7 @@ const AddressesScreen = () => {
       <FlatList
         data={addresses}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <SavedAddressCard
             item={item}

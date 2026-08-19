@@ -1,9 +1,12 @@
 import CustomButton from "@/components/CustomButton";
 import FormField from "@/components/FormField";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
-import { router } from "expo-router";
+import { axiosClient } from "@/globalApi";
+import { hideLoader, showLoader, useIsLoading } from "@/store/LoaderStore";
+import type { PasswordResetRouteParams } from "@/types";
+import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,16 +15,104 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useToast } from "react-native-toast-notifications";
+import z from "zod";
+
+const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Must contain an uppercase letter")
+      .regex(/[a-z]/, "Must contain a lowercase letter")
+      .regex(/[0-9]/, "Must contain a number")
+      .regex(/[^A-Za-z0-9]/, "Must contain a special character"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type ResetPasswordForm = z.input<typeof resetPasswordSchema>;
+type ResetPasswordField = keyof ResetPasswordForm;
 
 export default function NewPassword() {
-  const [form, setForm] = useState({ password: "", confirmPassword: "" });
+  const params = useLocalSearchParams<PasswordResetRouteParams>();
+  const toast = useToast();
+  const isLoading = useIsLoading();
+  const requestId = params.requestId ?? "";
+  const token = params.token ?? "";
+  const resetCredentialsMissing = !requestId || !token;
+  const [form, setForm] = useState<ResetPasswordForm>({
+    password: "",
+    confirmPassword: "",
+  });
+  const [touched, setTouched] = useState<
+    Partial<Record<ResetPasswordField, boolean>>
+  >({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  function updateField(field: keyof typeof form, value: string) {
+  const validation = resetPasswordSchema.safeParse(form);
+  const errors = validation.success
+    ? {}
+    : validation.error.issues.reduce<
+        Partial<Record<ResetPasswordField, string>>
+      >((fieldErrors, issue) => {
+        const field = issue.path[0] as ResetPasswordField;
+        fieldErrors[field] ??= issue.message;
+        return fieldErrors;
+      }, {});
+
+  const fieldError = (field: ResetPasswordField) =>
+    touched[field] || hasSubmitted ? errors[field] : undefined;
+
+  const updateField = (field: ResetPasswordField, value: string) =>
     setForm((current) => ({ ...current, [field]: value }));
-  }
 
-  const validPassword =
-    form.password.length >= 8 && form.password === form.confirmPassword;
+  const touchField = (field: ResetPasswordField) =>
+    setTouched((current) => ({ ...current, [field]: true }));
+
+  useEffect(() => {
+    if (!resetCredentialsMissing) return;
+
+    toast.show(
+      "Your password reset request is invalid or expired. Please try again.",
+      { type: "danger" },
+    );
+    router.replace("/(onboarding)/ForgotPassword");
+  }, [resetCredentialsMissing, toast]);
+
+  const handleResetPassword = async () => {
+    setHasSubmitted(true);
+    if (!validation.success || isLoading || resetCredentialsMissing) return;
+
+    try {
+      showLoader();
+      const response = await axiosClient.post(
+        `/auth/reset-password?requestId=${encodeURIComponent(requestId)}&token=${encodeURIComponent(token)}`,
+        validation.data,
+      );
+
+      toast.show(
+        response.data?.data?.attributes?.message ??
+          response.data?.meta?.message ??
+          "Password reset successfully.",
+        { type: "success" },
+      );
+      router.replace("/(onboarding)/Login");
+    } catch (error: any) {
+      toast.show(
+        error.response?.data?.message ??
+          "Unable to reset your password. Please request a new code.",
+        { type: "danger" },
+      );
+    } finally {
+      hideLoader();
+    }
+  };
+
+  if (resetCredentialsMissing) return null;
 
   return (
     <SafeAreaView className="bg-background" edges={["top"]} style={{ flex: 1 }}>
@@ -58,6 +149,8 @@ export default function NewPassword() {
               value={form.password}
               placeholder="Min. 8 characters"
               handleChangeText={(value) => updateField("password", value)}
+              onBlur={() => touchField("password")}
+              error={fieldError("password")}
               isPassword
               autoCapitalize="none"
               autoComplete="new-password"
@@ -69,6 +162,8 @@ export default function NewPassword() {
               handleChangeText={(value) =>
                 updateField("confirmPassword", value)
               }
+              onBlur={() => touchField("confirmPassword")}
+              error={fieldError("confirmPassword")}
               isPassword
               autoCapitalize="none"
               autoComplete="new-password"
@@ -76,8 +171,8 @@ export default function NewPassword() {
 
             <CustomButton
               title="Reset password"
-              handlePress={() => router.replace("/(onboarding)/Login")}
-              disableButton={!validPassword}
+              handlePress={handleResetPassword}
+              disableButton={isLoading}
               containerStyles="mt-3 w-full"
               textStyles="text-white"
             />

@@ -116,31 +116,16 @@ export default function Login() {
       const message = error.response?.data?.message
 
       if (message === "Please verify your email before signing in") {
-        try {
-          const resendResponse = await axiosClient.post("/auth/resend-verification", {
-            email: validation.data.email,
-          });
-
-          toast.show(
-            resendResponse.data?.data?.attributes?.message ??
-              "Verification email resent.",
-            { type: "success" },
-          );
-          router.push({
-            pathname: "/(onboarding)/RegisterOTP",
-            params: { email: validation.data.email },
-          });
-        } catch (resendError: unknown) {
-          toast.show(
-            error.response?.data?.message ?? "Unable to resend verification.",
-            { type: "danger" },
-          );
-        }
+        router.push({
+          pathname: "/(onboarding)/RegisterOTP",
+          params: { email: validation.data.email },
+        })
+      }else{
+        toast.show(message ?? "Unable to sign in. Please try again.", {
+          type: "danger",
+        });
       }
 
-      toast.show(message ?? "Unable to sign in. Please try again.", {
-        type: "danger",
-      });
     } finally {
       hideLoader();
     }

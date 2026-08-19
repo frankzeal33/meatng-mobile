@@ -263,7 +263,7 @@ const ReferralScreen = () => {
 
   const stats = referralCode?.stats ?? emptyStats;
   const statValue = (value: string) =>
-    initialLoading || !referralCode ? "—" : value;
+    initialLoading || !referralCode ? "-" : value;
   const referralStats: ReferralStat[] = useMemo(
     () => [
       {
@@ -349,7 +349,7 @@ const ReferralScreen = () => {
                   <ActivityIndicator size="small" color="#218225" />
                 ) : (
                   <Text selectable className="font-mbold text-base text-green">
-                    {referralCode?.referralCode || "—"}
+                    {referralCode?.referralCode || "-"}
                   </Text>
                 )}
               </View>

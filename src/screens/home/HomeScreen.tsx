@@ -13,6 +13,7 @@ import type {
 import { formatDate } from "@/utils/DateLabels";
 import { getFrequencyWeeksString } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
+import { completeOnboarding } from "@/utils/onboardingStorage";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
@@ -81,6 +82,18 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const markOnboardingCompleted = async () => {
+      try {
+        await completeOnboarding();
+      } catch {
+        // A storage failure should not prevent Home from loading.
+      }
+    };
+
+    void markOnboardingCompleted();
+  }, []);
+
   const totalBaseitems = totalItems();
   const totalAddons = totalAddonItems();
 
@@ -97,26 +110,26 @@ export default function HomeScreen() {
     {
       icon: "cube",
       label: "Active Plan",
-      value: statsUnavailable ? "—" : (stats?.activePlanName ?? "None"),
+      value: statsUnavailable ? "-" : (stats?.activePlanName ?? "None"),
     },
     {
       icon: "sync-circle",
       label: "Total Orders",
-      value: statsUnavailable ? "—" : String(stats?.totalOrders ?? 0),
+      value: statsUnavailable ? "-" : String(stats?.totalOrders ?? 0),
       onPress: () => router.push("/(protected)/(tabs)/Home/OrderHistory"),
     },
     {
       icon: "truck-fast",
       label: "Next Delivery",
       value: statsUnavailable
-        ? "—"
+        ? "-"
         : formatDate(stats?.nextDeliveryDate ?? null, "MMM dd"),
     },
     {
       icon: "calendar-month",
       label: "Member Since",
       value: statsUnavailable
-        ? "—"
+        ? "-"
         : formatDate(stats?.memberSince ?? null, "MMM yyyy"),
     },
   ];
@@ -320,14 +333,14 @@ export default function HomeScreen() {
               ) : null}
               <Text className="font-mbold text-lg">
                 {statsUnavailable
-                  ? "—"
+                  ? "-"
                   : stats?.activePlanName
                   ? `${stats.activePlanName} Plan`
                   : "No Plan"}
               </Text>
               <Text className="mt-1 font-mregular text-xs text-gray">
                 {statsUnavailable
-                  ? "—"
+                  ? "-"
                   : stats?.activePlanName
                   ? `${stats.weight ?? ""}${stats.weightUnit ?? ""} • ${getFrequencyWeeksString(stats.frequency ?? 0)} delivery`
                   : "No active subscription"}
@@ -335,7 +348,7 @@ export default function HomeScreen() {
             </View>
 
             {statsUnavailable ? (
-              <Text className="font-mbold text-lg text-green">—</Text>
+              <Text className="font-mbold text-lg text-green">-</Text>
             ) : stats?.price !== null && stats?.price !== undefined ? (
               <View className="items-end">
                 <Text className="font-mbold text-lg text-green">
@@ -355,7 +368,7 @@ export default function HomeScreen() {
                 label="Next Billing"
                 value={
                   statsUnavailable
-                    ? "—"
+                    ? "-"
                     : formatDate(
                         stats?.nextBillingDate ?? null,
                         "MMM dd, yyyy",
@@ -367,7 +380,7 @@ export default function HomeScreen() {
                 label="Next Delivery"
                 value={
                   statsUnavailable
-                    ? "—"
+                    ? "-"
                     : formatDate(
                         stats?.nextDeliveryDate ?? null,
                         "MMM dd, yyyy",
@@ -379,7 +392,7 @@ export default function HomeScreen() {
                 label="Edit Cutoff"
                 value={
                   statsUnavailable
-                    ? "—"
+                    ? "-"
                     : formatDate(
                         stats?.nextCutoffAt ?? null,
                         "MMM dd, h:mm a",

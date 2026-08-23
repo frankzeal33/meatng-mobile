@@ -20,7 +20,7 @@ import displayCurrency from "@/utils/displayCurrency";
 import { formatEnums } from "@/utils/formatEnums";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetFlatList, BottomSheetModal } from "@gorhom/bottom-sheet";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -209,11 +209,13 @@ export default function BuildYourBox() {
     return colorMap;
   }, [categories]);
 
-  useEffect(() => {
-    if (!subInfo?.subscription || !subInfo?.selectedFrequency) {
-      router.replace("/(onboarding)/Plans");
-    }
-  }, [subInfo]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!subInfo?.subscription || !subInfo?.selectedFrequency) {
+        router.replace("/(onboarding)/Plans");
+      }
+    }, [subInfo]),
+  );
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -320,7 +322,7 @@ export default function BuildYourBox() {
   const handleIncrementProduct = useCallback(
     (product: CatalogProduct) => {
       const result = add(product);
-      if (!result.success) toast.show(result.message ?? "Unable to add item.");
+      if (!result.success) toast.show(result.message ?? "Unable to add item.", { type: "warning" });
     },
     [add, toast],
   );
@@ -565,7 +567,7 @@ export default function BuildYourBox() {
                     </Text>
                     {attributes?.prefilled_items?.map((item, index) => (
                       <SpaceBetween
-                        key={item?.product_id}
+                        key={item?.product_id ?? String(index)}
                         title={item?.name}
                         value={`${item?.weight}${item?.weight_unit}${
                           (item?.quantity ?? 0) > 1

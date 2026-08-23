@@ -47,6 +47,15 @@ export default function AuthOtpScreen({
     }
   };
 
+  const handleConfirm = async () => {
+    const verified = await onConfirm(otp);
+
+    if (verified) {
+      setOtp("");
+      setInputKey((current) => current + 1);
+    }
+  };
+
   return (
     <SafeAreaView className="bg-background" edges={["top"]} style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -142,8 +151,8 @@ export default function AuthOtpScreen({
                     Resend in
                   </Text>
                   <CountDown
-                    key={inputKey}
                     initialSeconds={90}
+                    resetKey={inputKey}
                     onFinish={() => setResendAvailable(true)}
                   />
                 </View>
@@ -152,7 +161,7 @@ export default function AuthOtpScreen({
 
             <CustomButton
               title={buttonTitle}
-              handlePress={() => onConfirm(otp)}
+              handlePress={handleConfirm}
               disableButton={otp.length !== numberOfDigits}
               containerStyles="mt-6 w-full"
               textStyles="text-white"

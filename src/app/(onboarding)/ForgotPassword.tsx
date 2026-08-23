@@ -76,10 +76,16 @@ export default function ForgotPassword() {
           "Reset code sent to your email.",
         { type: "success" },
       );
+
       router.push({
         pathname: "/(onboarding)/ForgotPasswordOTP",
         params: { email: validation.data.email },
       });
+
+      setForm({
+        email: ""
+      })
+      
     } catch (error: any) {
       toast.show(
         error.response?.data?.message ??

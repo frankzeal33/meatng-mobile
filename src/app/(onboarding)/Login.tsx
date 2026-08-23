@@ -9,10 +9,10 @@ import {
   useIsLoading,
 } from "@/store/LoaderStore";
 import { useProfileStore } from "@/store/ProfileStore";
-import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -39,6 +39,7 @@ const loginSchema = z.object({
 
 type LoginForm = z.input<typeof loginSchema>;
 type LoginField = keyof LoginForm;
+const rememberedEmailKey = "rememberedLoginEmail";
 
 export default function Login() {
   const insets = useSafeAreaInsets();
@@ -51,6 +52,23 @@ export default function Login() {
     Partial<Record<LoginField, boolean>>
   >({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  useEffect(() => {
+    const loadRememberedEmail = async () => {
+      try {
+        const rememberedEmail = await AsyncStorage.getItem(rememberedEmailKey);
+        if (!rememberedEmail) return;
+
+        setForm((current) =>
+          current.email ? current : { ...current, email: rememberedEmail },
+        );
+      } catch {
+        // Remembering the email is optional and must not block sign-in.
+      }
+    };
+
+    void loadRememberedEmail();
+  }, []);
 
   const validation = loginSchema.safeParse(form);
   const errors = validation.success
@@ -105,13 +123,16 @@ export default function Login() {
         await login(accessToken, refreshToken);
       }
 
+      const rememberedEmail = user.email || validation.data.email;
+      await AsyncStorage.setItem(rememberedEmailKey, rememberedEmail);
+
       toast.show("Login successful", {
         type: "success",
       });
 
       router.replace("/(protected)/(tabs)/Home")
 
-      setForm({ email: "", password: "" })
+      setForm({ email: rememberedEmail, password: "" })
     } catch (error: any) {
       const message = error.response?.data?.message
 

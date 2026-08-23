@@ -10,7 +10,7 @@
     "@react-native-community/netinfo": "12.0.1",
     "axios": "^1.19.0",
     "date-fns": "^4.4.0",
-    "expo": "~56.0.17",
+    "expo": "~56.0.20",
     "expo-checkbox": "~56.0.1",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.22",

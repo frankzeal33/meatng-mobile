@@ -62,6 +62,7 @@ export type Plan = {
 type SubscriptionInfo = {
   subscription: Plan;
   selectedFrequency: string;
+  source: "onboarding" | "tab";
 };
 
 type SubscriptionStore = {
@@ -73,6 +74,7 @@ type SubscriptionStore = {
 const defaultSubInfo: SubscriptionInfo = {
   subscription: null,
   selectedFrequency: "",
+  source: "onboarding",
 };
 
 export const useSubscriptionStore = create<SubscriptionStore>()(

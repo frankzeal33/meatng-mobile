@@ -15,7 +15,7 @@ export default function ForgotPasswordOTP() {
       toast.show("Email address is missing. Please go back.", {
         type: "danger",
       });
-      return;
+      return false;
     }
 
     try {
@@ -32,7 +32,7 @@ export default function ForgotPasswordOTP() {
         toast.show("The password reset response is incomplete. Try again.", {
           type: "danger",
         });
-        return;
+        return false;
       }
 
       toast.show(response.data?.meta?.message ??
@@ -43,12 +43,14 @@ export default function ForgotPasswordOTP() {
         pathname: "/(onboarding)/NewPassword",
         params: { requestId, token },
       });
+      return true;
     } catch (error: any) {
       toast.show(
         error.response?.data?.message ??
           "Unable to verify the reset code. Please try again.",
         { type: "danger" },
       );
+      return false;
     } finally {
       hideLoader();
     }

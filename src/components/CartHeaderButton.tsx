@@ -1,23 +1,42 @@
 import { useAddonStore } from "@/store/addonStore";
 import { useCartStore } from "@/store/cartStore";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
+import { useToast } from "react-native-toast-notifications";
 
 export default function CartHeaderButton() {
+  const toast = useToast();
+  const subInfo = useSubscriptionStore((state) => state.subInfo);
+  const setSubInfo = useSubscriptionStore((state) => state.setSubInfo);
+  const totalBaseItems = useCartStore((state) =>
+    state.items.reduce((total, item) => total + item.qty, 0),
+  );
+  const totalAddons = useAddonStore((state) =>
+    state.addonItems.reduce((total, item) => total + item.qty, 0),
+  );
+  const total = totalBaseItems + totalAddons;
 
-  const totalItems = useCartStore((state) => state.totalItems);
-  const totalAddonItems = useAddonStore((state) => state.totalAddonItems);
+  const goToCart = () => {
+    if (!subInfo?.subscription) {
+      toast.show("Please select a plan first.", { type: "warning" });
+      return;
+    }
 
-  const totalBaseitems = totalItems();
-  const totalAddons = totalAddonItems();
-
-  const total = totalBaseitems + totalAddons;
+    setSubInfo({
+      ...subInfo,
+      source: "tab"
+    });
+    router.push("/(onboarding)/ReviewCart");
+  };
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open cart${total > 0 ? `, ${total} ${total === 1 ? "item" : "items"}` : ""}`}
       hitSlop={8}
-      onPress={() => router.push("/(onboarding)/ReviewCart")}
+      onPress={goToCart}
       className="relative size-12 items-center justify-center rounded-full bg-green-light active:opacity-70"
     >
       <Ionicons name="cart-outline" size={24} color="#218225" />

@@ -32,6 +32,11 @@ import {
 } from "react-native";
 import { useToast } from "react-native-toast-notifications";
 import z from "zod";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
 
 const emptyAddressForm: AddressForm = {
   label: "",
@@ -107,6 +112,7 @@ const mapAddressToForm = (address: ApiAddress): AddressForm => {
 
 const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
   const toast = useToast();
+  const isLoading = useIsLoading();
   const statePickerRef = useRef<BottomSheetModal>(null);
   const areaPickerRef = useRef<BottomSheetModal>(null);
   const [form, setForm] = useState<AddressForm>(emptyAddressForm);
@@ -115,7 +121,6 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
   >({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [initialLoading, setInitialLoading] = useState(mode === "edit");
-  const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const validation = addressSchema.safeParse(form);
@@ -190,7 +195,7 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
 
   const saveAddress = async () => {
     setHasSubmitted(true);
-    if (!validation.success || isSaving) return;
+    if (!validation.success || isLoading) return;
 
     const data = validation.data;
     const payload = {
@@ -210,7 +215,7 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
     };
 
     try {
-      setIsSaving(true);
+      showLoader();
       if (mode === "edit") {
         if (!addressId) {
           toast.show("This address could not be found.", { type: "danger" });
@@ -230,7 +235,7 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
         { type: "danger" },
       );
     } finally {
-      setIsSaving(false);
+      hideLoader();
     }
   };
 
@@ -422,7 +427,7 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
 
             <CustomButton
               title={
-                isSaving
+                isLoading
                   ? "Saving..."
                   : mode === "add"
                     ? "Add Address"
@@ -431,8 +436,7 @@ const AddressFormScreen = ({ mode, addressId }: AddressFormScreenProps) => {
               handlePress={saveAddress}
               containerStyles="mt-6 w-full"
               textStyles="text-white"
-              isLoading={isSaving}
-              disableButton={isSaving}
+              disableButton={isLoading}
             />
           </ScrollView>
         </KeyboardAvoidingView>

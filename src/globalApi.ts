@@ -58,7 +58,7 @@ axiosClient.interceptors.response.use(
 
         const response = await axios.post(
           `${process.env.EXPO_PUBLIC_SERVER_URI}/auth/refresh-token`,
-          { refresh_token: refreshToken },
+          { refreshToken },
           { withCredentials: true, headers: mobileHeaders },
         );
 

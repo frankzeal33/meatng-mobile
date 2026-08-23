@@ -12,6 +12,7 @@ export default function HomeListHeader({
   searchValue,
   onFilterChange,
   onSearchChange,
+  onBackPress,
 }: HomeListHeaderProps) {
   return (
     <View className="bg-background pb-3">
@@ -19,7 +20,7 @@ export default function HomeListHeader({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => router.back()}
+          onPress={onBackPress ?? (() => router.back())}
           className="size-10 items-center justify-center rounded-full bg-green-light active:opacity-70"
         >
           <Ionicons name="arrow-back" size={21} color="#657466" />

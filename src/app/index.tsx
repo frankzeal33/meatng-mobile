@@ -8,14 +8,13 @@ import { View } from "react-native";
 export default function App() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<
-    boolean | null
-  >(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
   useEffect(() => {
     const loadOnboardingStatus = async () => {
       try {
-        setOnboardingCompleted(await hasCompletedOnboarding());
+        const notFirstTime = await hasCompletedOnboarding()
+        setOnboardingCompleted(notFirstTime);
       } catch {
         setOnboardingCompleted(false);
       }

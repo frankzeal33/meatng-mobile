@@ -2,12 +2,15 @@ import type { CountDownProps } from "@/types";
 import React, { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 
-const CountDown = ({ initialSeconds, onFinish }: CountDownProps) => {
+const CountDown = ({ initialSeconds, onFinish, resetKey }: CountDownProps) => {
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const hasFinished = useRef(false);
 
   // Countdown logic
   useEffect(() => {
+    setSecondsLeft(initialSeconds);
+    hasFinished.current = false;
+
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -19,7 +22,7 @@ const CountDown = ({ initialSeconds, onFinish }: CountDownProps) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [initialSeconds, resetKey]);
 
   // Call onFinish AFTER render
   useEffect(() => {

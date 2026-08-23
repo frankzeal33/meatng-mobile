@@ -10,6 +10,11 @@ import { useState } from "react";
 import { ScrollView } from "react-native";
 import { useToast } from "react-native-toast-notifications";
 import z from "zod";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
 
 const changePasswordSchema = z
   .object({
@@ -39,6 +44,7 @@ const changePasswordSchema = z
 
 const ChangePasswordScreen = () => {
   const toast = useToast();
+  const isLoading = useIsLoading();
   const [form, setForm] = useState<ChangePasswordForm>({
     currentPassword: "",
     newPassword: "",
@@ -48,7 +54,6 @@ const ChangePasswordScreen = () => {
     Partial<Record<keyof ChangePasswordForm, boolean>>
   >({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validation = changePasswordSchema.safeParse(form);
   const errors = validation.success
@@ -74,10 +79,10 @@ const ChangePasswordScreen = () => {
 
   const handleChangePassword = async () => {
     setHasSubmitted(true);
-    if (!validation.success || isSubmitting) return;
+    if (!validation.success || isLoading) return;
 
     try {
-      setIsSubmitting(true);
+      showLoader();
       const response = await axiosClient.patch(
         "/auth/change-password",
         validation.data,
@@ -99,7 +104,7 @@ const ChangePasswordScreen = () => {
         { type: "danger" },
       );
     } finally {
-      setIsSubmitting(false);
+      hideLoader();
     }
   };
 
@@ -152,12 +157,11 @@ const ChangePasswordScreen = () => {
           autoComplete="new-password"
         />
         <CustomButton
-          title={isSubmitting ? "Updating..." : "Change Password"}
+          title={isLoading ? "Updating..." : "Change Password"}
           handlePress={handleChangePassword}
           containerStyles="mt-6 w-full"
           textStyles="text-white"
-          isLoading={isSubmitting}
-          disableButton={isSubmitting}
+          disableButton={isLoading}
         />
       </ScrollView>
     </SettingsScreenRoot>

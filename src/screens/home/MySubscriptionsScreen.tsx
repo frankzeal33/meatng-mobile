@@ -479,6 +479,9 @@ const MySubscriptionsScreen = () => {
         searchValue={searchValue}
         onFilterChange={setSelectedFilter}
         onSearchChange={setSearchValue}
+        onBackPress={() => {
+          router.dismissTo("/(protected)/(tabs)/Home");
+        }}
       />
       <FlatList
         data={initialLoading || error ? [] : subscriptions}

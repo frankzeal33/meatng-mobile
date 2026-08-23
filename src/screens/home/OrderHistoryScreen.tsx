@@ -376,6 +376,9 @@ const OrderHistoryScreen = () => {
         searchValue={searchValue}
         onFilterChange={setSelectedFilter}
         onSearchChange={setSearchValue}
+        onBackPress={() => {
+          router.dismissTo("/(protected)/(tabs)/Home");
+        }}
       />
 
       <FlatList

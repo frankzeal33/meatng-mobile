@@ -1,9 +1,8 @@
 import HomeSkeleton from "@/components/home/HomeSkeleton";
+import CartHeaderButton from "@/components/CartHeaderButton";
 import RetryButton from "@/components/RetryButton";
 import { axiosClient } from "@/globalApi";
 import { useProfileStore } from "@/store/ProfileStore";
-import { useAddonStore } from "@/store/addonStore";
-import { useCartStore } from "@/store/cartStore";
 import type {
   GreenIconProps,
   HomeStats,
@@ -74,8 +73,6 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const profile = useProfileStore((state) => state.userProfile);
-  const totalItems = useCartStore((state) => state.totalItems);
-  const totalAddonItems = useAddonStore((state) => state.totalAddonItems);
   const [stats, setStats] = useState<HomeStats | null>(null);
   const [renewing, setRenewing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -93,11 +90,6 @@ export default function HomeScreen() {
 
     void markOnboardingCompleted();
   }, []);
-
-  const totalBaseitems = totalItems();
-  const totalAddons = totalAddonItems();
-
-  const total = totalBaseitems + totalAddons;
 
   const firstName = profile.firstName.trim() || "Member";
   const initial = firstName.charAt(0).toUpperCase();
@@ -265,19 +257,9 @@ export default function HomeScreen() {
           </View>
         </Pressable>
 
-        <Pressable
-          onPress={() => router.push("/(onboarding)/ReviewCart")}
-          className="ml-3 size-10 items-center justify-center rounded-full bg-green-light active:opacity-70"
-        >
-          <MaterialCommunityIcons name="cart" size={19} color="#218225" />
-          {total > 0 && (
-            <View className="absolute -right-0.5 -top-1 min-w-4 items-center justify-center rounded-full bg-white px-1 border border-gray-200">
-              <Text className="font-mbold text-[10px] text-red-600">
-                {total > 99 ? "99+" : total}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+        <View className="ml-3">
+          <CartHeaderButton />
+        </View>
       </View>
 
       <ScrollView

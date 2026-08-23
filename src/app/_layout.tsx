@@ -1,5 +1,5 @@
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -16,6 +16,7 @@ import * as Linking from 'expo-linking';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+
   const [fontsLoaded, error] = useFonts({
     "Montserrat-Black": require("../../assets/fonts/Montserrat-Black.ttf"),
     "Montserrat-Bold": require("../../assets/fonts/Montserrat-Bold.ttf"),
@@ -43,6 +44,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+
     const handleDeepLink = ({ url }: {url: any}) => {
       const data = Linking.parse(url);
       console.log('Received payment callback:', data);
@@ -50,128 +52,52 @@ export default function RootLayout() {
       const hostname = data.hostname
       const query = data.queryParams
       
-      // if(hostname === "goto"){
+      if(hostname === "verify-payment"){
 
-      //   switch (query?.screen) {
-      //     case 'fx':
+        switch (query?.screen) {
+          case 'plan':
 
-      //       if(query?.status === "successful"){
+            if(query?.status === "successful"){
 
-      //         if(query?.currencyTo === "NGN"){
-      //           router.replace({
-      //             pathname: "/(protected)/(routes)/NairaAccount",
-      //             params: {
-      //               status: query?.status,          
-      //               reference: query?.reference,
-      //               currencyFrom: query?.currencyFrom,
-      //               currencyTo: query?.currencyTo,     
-      //               paymentType: query?.paymentType,  
-      //             },
-      //           });
-      //         }else if(query?.currencyTo === "GBP"){
-      //           router.replace({
-      //             pathname: "/(protected)/(routes)/GBPAccount",
-      //             params: {
-      //               status: query?.status,           // "successful"
-      //               reference: query?.reference,
-      //               currencyFrom: query?.currencyFrom, // "NGN"
-      //               currencyTo: query?.currencyTo,     // "GBP"
-      //               paymentType: query?.paymentType,   // "fx"
-      //             },
-      //           });
-      //         }else if(query?.currencyTo === "USD"){
-      //           router.replace({
-      //             pathname: "/(protected)/(routes)/USDAccount",
-      //             params: {
-      //               status: query?.status,          
-      //               reference: query?.reference,
-      //               currencyFrom: query?.currencyFrom,
-      //               currencyTo: query?.currencyTo,     
-      //               paymentType: query?.paymentType,  
-      //             },
-      //           });
-      //         }else if(query?.currencyTo === "EUR"){
-      //           router.replace({
-      //             pathname: "/(protected)/(routes)/EUROAccount",
-      //             params: {
-      //               status: query?.status,          
-      //               reference: query?.reference,
-      //               currencyFrom: query?.currencyFrom,
-      //               currencyTo: query?.currencyTo,     
-      //               paymentType: query?.paymentType,  
-      //             },
-      //           });
-      //         }else{
-      //           router.replace("/(protected)/(tabs)/home")
-      //         }
-      //       }else{
-      //         router.replace("/(protected)/(tabs)/home")
-      //       }
-      //       break;
+            }else{
+              router.replace("/(protected)/(tabs)/Home")
+            }
+            break;
   
-      //     case 'wallet':
+          case 'gift':
             
-      //       router.replace("/(protected)/(tabs)/home");
-      //       break;
+            router.replace("/(protected)/(tabs)/Home");
+            break;
 
-      //     case 'shop4me':
-      //       if(query?.status === "successful"){
-      //         Shop4MeClearItems();
-      //       }
-      //       router.replace("/(protected)/(routes)/ShopWithLinkOrders")
-           
-      //       break;
-
-      //     case 'orders':
+          case 'subscription':
             
-      //       if(query?.status === "successful"){
-      //         StoreClearItems()
-      //       }
-      //       router.replace("/(protected)/(routes)/FoodingOrders")
-      //       break;
-
-      //     case 'amazon':
-            
-      //       if(query?.status === "successful"){
-      //         AmazonClearItems();
-      //       }
-      //       router.replace("/(protected)/(routes)/AmazonOrders")
-      //       break;
-
-      //     case 'shipments':
-            
-      //       router.replace("/(protected)/(routes)/MyShipments");
-      //       break;
-
-      //     case 'naija-shop':
-            
-      //       if(query?.status === "successful"){
-      //         NaijaShopClearItems();
-      //       }
-      //       router.replace("/(protected)/(routes)/AmazonOrders")
-      //       break;
+            if(query?.status === "successful"){
+              // StoreClearItems()
+            }
+            router.replace("/(protected)/(tabs)/Home/OrderHistory")
+            break;
   
-      //     default:
-      //       router.replace("/(protected)/(tabs)/home");
-      //       break;
-      //   }
-      // }
+          default:
+            router.replace("/(protected)/(tabs)/Home");
+            break;
+        }
+      }
       
     };
 
-    const sub = Linking.addEventListener('url', handleDeepLink);
+  const sub = Linking.addEventListener('url', handleDeepLink);
 
-      // Check if app was opened from a link
-      Linking.getInitialURL().then((url) => {
-        if (url) {
-          handleDeepLink({ url });
-        }
-      });
+    // Check if app was opened from a link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
 
-      return () => {
-        sub.remove();
-      };
-    }, []);
+    return () => {
+      sub.remove();
+    };
+  }, []);
 
   if (!fontsLoaded) {
     return null;

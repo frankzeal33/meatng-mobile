@@ -21,8 +21,8 @@ import type { ApiAddress } from "@/types";
 import { getFrequencyWeeks } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { router } from "expo-router";
+import { BottomSheetModal, BottomSheetSectionList } from "@gorhom/bottom-sheet";
+import { router, useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +39,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
 import { z } from "zod";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
 
 const frontendUrl =
   process.env.EXPO_PUBLIC_FRONTEND_URL ?? "https://meatng.com";
@@ -87,6 +92,28 @@ type CartLine = {
   item_type?: string;
 };
 
+type SummaryItem =
+  | {
+      type: "prefilled";
+      id: string;
+      name: string;
+      weight: string;
+      quantity: number;
+    }
+  | {
+      type: "base" | "addon";
+      id: string;
+      name: string;
+      weight: string;
+      quantity: number;
+    };
+
+type SummarySection = {
+  type: SummaryItem["type"];
+  title: string;
+  data: SummaryItem[];
+};
+
 type CheckoutCart = {
   id: string;
   attributes: {
@@ -115,6 +142,7 @@ const mapAddress = (address: ApiAddress): SavedAddress => {
 const Checkout = () => {
 
   const toast = useToast();
+  const isLoading = useIsLoading();
   const subInfo = useSubscriptionStore((state) => state.subInfo);
   const profile = useProfileStore((state) => state.userProfile);
   const attributes = subInfo?.subscription?.attributes;
@@ -144,8 +172,6 @@ const Checkout = () => {
   const [cart, setCart] = useState<CheckoutCart | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [resolvingOrder, setResolvingOrder] = useState(false);
-  const [paying, setPaying] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [resolvedAddressId, setResolvedAddressId] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -225,14 +251,16 @@ const Checkout = () => {
     }
   }, [loadAddresses]);
 
-  useEffect(() => {
-    if (!subInfo?.subscription || !subInfo.selectedFrequency) {
-      router.replace("/(onboarding)/Plans");
-      return;
-    }
+  useFocusEffect(
+    useCallback(() => {
+      if (!subInfo?.subscription || !subInfo.selectedFrequency) {
+        router.replace("/(onboarding)/Plans");
+        return;
+      }
 
-    void loadCheckout();
-  }, [loadCheckout, subInfo]);
+      void loadCheckout();
+    }, [loadCheckout, subInfo]),
+  );
 
   const selectSavedAddress = (address: SavedAddress) => {
     const [selectedFirstName, ...remainingNames] = address.recipient.split(" ");
@@ -268,11 +296,13 @@ const Checkout = () => {
   };
 
   const openSummary = async () => {
+    if (isLoading) return;
+
     setHasSubmitted(true);
     if (!validation.success) return;
 
     try {
-      setResolvingOrder(true);
+      showLoader();
       let addressId = selectedAddressId;
 
       if (!addressId) {
@@ -312,14 +342,15 @@ const Checkout = () => {
         { type: "danger" },
       );
     } finally {
-      setResolvingOrder(false);
+      hideLoader();
     }
   };
 
   const payNow = async () => {
+    if (isLoading) return;
     if (!resolvedAddressId) return;
     try {
-      setPaying(true);
+      showLoader();
       const response = await axiosClient.post("/checkout", {
         address_id: resolvedAddressId,
         delivery_note: form.deliveryNote.trim(),
@@ -343,7 +374,7 @@ const Checkout = () => {
         { type: "danger" },
       );
     } finally {
-      setPaying(false);
+      hideLoader();
     }
   };
 
@@ -359,6 +390,65 @@ const Checkout = () => {
   const cartItems = cart?.attributes?.items ?? [];
   const baseItems = cartItems.filter((item) => item.item_type === "base");
   const addonItems = cartItems.filter((item) => item.item_type === "addon");
+  const summarySections = useMemo<SummarySection[]>(() => {
+    const sections: SummarySection[] = [];
+
+    if (attributes?.prefilled_items?.length) {
+      const data: SummaryItem[] = [];
+      for (const item of attributes.prefilled_items) {
+        data.push({
+          type: "prefilled",
+          id: item.product_id,
+          name: item.name,
+          weight: `${item.weight}${item.weight_unit}`,
+          quantity: item.quantity,
+        });
+      }
+      sections.push({
+        type: "prefilled",
+        title: "Mandatory cuts",
+        data,
+      });
+    }
+
+    if (baseItems.length) {
+      const data: SummaryItem[] = [];
+      baseItems.forEach((item, index) => {
+        data.push({
+          type: "base",
+          id: `${item.productId?.id ?? "base"}-${index}`,
+          name: item.productId?.name ?? "Item",
+          weight: item.productId?.formattedWeight ?? "",
+          quantity: item.quantity ?? 0,
+        });
+      });
+      sections.push({
+        type: "base",
+        title: "Your custom picks",
+        data,
+      });
+    }
+
+    if (addonItems.length) {
+      const data: SummaryItem[] = [];
+      addonItems.forEach((item, index) => {
+        data.push({
+          type: "addon",
+          id: `${item.productId?.id ?? "addon"}-${index}`,
+          name: item.productId?.name ?? "Item",
+          weight: item.productId?.formattedWeight ?? "",
+          quantity: item.quantity ?? 1,
+        });
+      });
+      sections.push({
+        type: "addon",
+        title: "Add-ons",
+        data,
+      });
+    }
+
+    return sections;
+  }, [addonItems, attributes?.prefilled_items, baseItems]);
 
   return (
     <SafeAreaView className="bg-background" style={{ flex: 1 }}>
@@ -471,7 +561,7 @@ const Checkout = () => {
 
         {!loadingData && !loadError ? (
           <View className="px-4">
-            <CustomButton title="Continue" handlePress={openSummary} isLoading={resolvingOrder} disableButton={!cart} containerStyles="mb-1 mt-2 w-full" textStyles="text-white" />
+            <CustomButton title="Continue" handlePress={openSummary} disableButton={!cart} containerStyles="mb-1 mt-2 w-full" textStyles="text-white" />
           </View>
         ) : null}
       </KeyboardAvoidingView>
@@ -494,93 +584,111 @@ const Checkout = () => {
           <Pressable onPress={() => summaryRef.current?.dismiss()} className="mb-3 size-12 items-center justify-center rounded-full bg-green-light">
             <Ionicons name="arrow-back" size={22} color="#218225" />
           </Pressable>
-          <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
-            <View>
-              <Text className="font-mbold text-2xl">Order Summary</Text>
-              <Text className="font-mregular text-sm text-gray">Confirm your subscription box and add-ons before payment.</Text>
-            </View>
-            <View className="rounded-2xl bg-white p-4">
-              {!!attributes?.prefilled_items?.length && (
-                <View className="rounded-xl bg-green-lighter p-3">
-                  <Text className="font-msbold text-[10px] uppercase tracking-wider text-gray">
-                    Mandatory cuts
+          <BottomSheetSectionList<SummaryItem, SummarySection>
+            sections={summarySections}
+            keyExtractor={(item) => `${item.type}-${item.id}`}
+            stickySectionHeadersEnabled={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            ListHeaderComponent={
+              <View>
+                <View className="mb-3">
+                  <Text className="font-mbold text-2xl">Order Summary</Text>
+                  <Text className="font-mregular text-sm text-gray">Confirm your subscription box and add-ons before payment.</Text>
+                </View>
+                <View className="h-4 rounded-t-2xl bg-white" />
+              </View>
+            }
+            renderSectionHeader={({ section }) => (
+              <View className="bg-white px-4">
+                <View
+                  className={`px-3 pt-3 ${
+                    section.type === "prefilled"
+                      ? "rounded-t-xl bg-green-lighter"
+                      : section.type === "addon"
+                        ? "mt-4 rounded-t-xl border-x border-t border-gray-200"
+                        : attributes?.prefilled_items?.length
+                          ? "mt-4"
+                          : ""
+                  }`}
+                >
+                  <Text
+                    className={`font-msbold text-[10px] uppercase tracking-wider ${
+                      section.type === "base" ? "text-green" : "text-gray"
+                    }`}
+                  >
+                    {section.title}
                   </Text>
-                  <View className="mt-3 gap-2">
-                    {attributes.prefilled_items.map((item) => (
+                </View>
+              </View>
+            )}
+            renderItem={({ item }) => {
+              if (item.type === "prefilled") {
+                return (
+                  <View className="bg-white px-4">
+                    <View className="bg-green-lighter px-3 pt-2">
                       <SpaceBetween
-                        key={item.product_id}
                         title={item.name}
-                        value={`${item.weight}${item.weight_unit}${item.quantity > 1 ? ` · X (${item.quantity})` : ""}`}
+                        value={`${item.weight}${item.quantity > 1 ? ` · X (${item.quantity})` : ""}`}
                         titleStyles="flex-1 font-msbold text-xs"
                         valueStyles="font-mregular text-[10px] text-gray"
                       />
-                    ))}
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              }
 
-              {!!baseItems.length && (
-                <View className={attributes?.prefilled_items?.length ? "mt-4" : ""}>
-                  <Text className="font-msbold text-[10px] uppercase tracking-wider text-green">
-                    Your custom picks
-                  </Text>
-                  <View className="mt-3 gap-2">
-                    {baseItems.map((item, index) => (
-                      <View
-                        key={`${item.productId?.id}-${index}`}
-                        className="flex-row items-center justify-between gap-3"
-                      >
-                        <View className="min-w-0 flex-1 flex-row items-center gap-2">
-                          <Text className="flex-shrink font-msbold text-xs">
-                            {item.productId?.name ?? "Item"}
+              return (
+                <View className="bg-white px-4">
+                  <View
+                    className={`flex-row justify-between gap-3 px-3 pt-2 ${
+                      item.type === "addon"
+                        ? "items-start border-x border-gray-200"
+                        : "items-center"
+                    }`}
+                  >
+                    <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                      <Text className="shrink font-msbold text-xs">
+                        {item.name}
+                      </Text>
+                      {item.type === "addon" || item.quantity > 1 ? (
+                        <View
+                          className={
+                            item.type === "addon"
+                              ? "rounded-full border border-gray-200 px-2 py-1"
+                              : "rounded-full bg-green-light px-2 py-1"
+                          }
+                        >
+                          <Text
+                            className={`font-msbold text-[9px] ${
+                              item.type === "base" ? "text-green" : ""
+                            }`}
+                          >
+                            {item.quantity}x
                           </Text>
-                          {(item.quantity ?? 0) > 1 ? (
-                            <View className="rounded-full bg-green-light px-2 py-1">
-                              <Text className="font-msbold text-[9px] text-green">
-                                {item.quantity}x
-                              </Text>
-                            </View>
-                          ) : null}
                         </View>
-                        <Text className="font-mregular text-[10px] text-gray">
-                          {item.productId?.formattedWeight ?? ""}
-                        </Text>
-                      </View>
-                    ))}
+                      ) : null}
+                    </View>
+                    <Text className="font-mregular text-[10px] text-gray">
+                      {item.weight}
+                    </Text>
                   </View>
                 </View>
-              )}
-
-              {!!addonItems.length && (
-                <View className="mt-4 rounded-xl border border-gray-200 p-3">
-                  <Text className="font-msbold text-[10px] uppercase tracking-wider text-gray">
-                    Add-ons
-                  </Text>
-                  <View className="mt-3 gap-2">
-                    {addonItems.map((item, index) => (
-                      <View
-                        key={`${item.productId?.id}-${index}`}
-                        className="flex-row items-start justify-between gap-3"
-                      >
-                        <View className="min-w-0 flex-1 flex-row items-center gap-2">
-                          <Text className="flex-shrink font-msbold text-xs">
-                            {item.productId?.name ?? "Item"}
-                          </Text>
-                          <View className="rounded-full border border-gray-200 px-2 py-1">
-                            <Text className="font-msbold text-[9px]">
-                              {item.quantity ?? 1}x
-                            </Text>
-                          </View>
-                        </View>
-                        <Text className="font-mregular text-[10px] text-gray">
-                          {item.productId?.formattedWeight ?? ""}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+              );
+            }}
+            renderSectionFooter={({ section }) =>
+              section.type === "prefilled" ? (
+                <View className="bg-white px-4">
+                  <View className="h-3 rounded-b-xl bg-green-lighter" />
                 </View>
-              )}
-
+              ) : section.type === "addon" ? (
+                <View className="bg-white px-4">
+                  <View className="h-3 rounded-b-xl border-x border-b border-gray-200" />
+                </View>
+              ) : null
+            }
+            ListFooterComponent={
+              <View className="rounded-b-2xl bg-white px-4 pb-4">
               <View className="mt-4 gap-2">
                 <SpaceBetween title="Plan" value={attributes?.name ?? "Subscription Plan"} titleStyles="text-gray" />
                 <SpaceBetween title="Weight" value={`${attributes?.weight ?? 0}${attributes?.weight_unit ?? "kg"}`} titleStyles="text-gray" />
@@ -595,7 +703,11 @@ const Checkout = () => {
                   accessibilityRole="button"
                   onPress={() => {
                     summaryRef.current?.dismiss();
-                    router.dismissTo("/(onboarding)/Plans");
+                    router.dismissTo(
+                      subInfo?.source === "tab"
+                        ? "/(protected)/(tabs)/Plans"
+                        : "/(onboarding)/Plans",
+                    );
                   }}
                   className="mt-2 rounded-lg border border-green px-4 py-3 active:bg-green-lighter"
                 >
@@ -640,9 +752,10 @@ const Checkout = () => {
                 titleStyles="font-mbold text-base"
                 valueStyles="font-msbold text-base text-green"
               />
-            </View>
-          </BottomSheetScrollView>
-          <CustomButton title="Pay Now" handlePress={payNow} isLoading={paying} containerStyles="mb-2 mt-4 w-full" textStyles="text-white" />
+              </View>
+            }
+          />
+          <CustomButton title="Pay Now" handlePress={payNow} containerStyles="mb-2 mt-4 w-full" textStyles="text-white" />
         </View>
       </CustomButtomSheet>
     </SafeAreaView>

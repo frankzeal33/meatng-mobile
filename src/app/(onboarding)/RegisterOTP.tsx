@@ -15,7 +15,7 @@ export default function RegisterOTP() {
       toast.show("Email address is missing. Please go back.", {
         type: "danger",
       });
-      return;
+      return false;
     }
 
     try {
@@ -32,12 +32,14 @@ export default function RegisterOTP() {
         { type: "success" },
       );
       router.replace("/(onboarding)/Login");
+      return true;
     } catch (error: any) {
       toast.show(
         error.response?.data?.message ??
           "Unable to verify the code. Please try again.",
         { type: "danger" },
       );
+      return false;
     } finally {
       hideLoader();
     }

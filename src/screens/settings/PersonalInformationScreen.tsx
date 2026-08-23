@@ -12,6 +12,11 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useToast } from "react-native-toast-notifications";
 import z from "zod";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
 
 const personalInformationSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
@@ -47,6 +52,7 @@ const formatProfileResponse = (
 
 const PersonalInformationScreen = () => {
   const toast = useToast();
+  const isLoading = useIsLoading();
   const storedProfile = useProfileStore((state) => state.userProfile);
   const setProfile = useProfileStore((state) => state.setProfile);
   const [form, setForm] = useState<PersonalInformationForm>({
@@ -62,7 +68,6 @@ const PersonalInformationScreen = () => {
   >({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const validation = personalInformationSchema.safeParse(form);
@@ -117,7 +122,7 @@ const PersonalInformationScreen = () => {
 
   const handleSave = async () => {
     setHasSubmitted(true);
-    if (!validation.success || isSubmitting) return;
+    if (!validation.success || isLoading) return;
 
     const currentValues = {
       firstName: form.firstName.trim(),
@@ -138,7 +143,7 @@ const PersonalInformationScreen = () => {
     }
 
     try {
-      setIsSubmitting(true);
+      showLoader();
       const response = await axiosClient.patch("/users/me", {
         first_name: validation.data.firstName,
         last_name: validation.data.lastName,
@@ -177,7 +182,7 @@ const PersonalInformationScreen = () => {
         { type: "danger" },
       );
     } finally {
-      setIsSubmitting(false);
+      hideLoader();
     }
   };
 
@@ -255,12 +260,11 @@ const PersonalInformationScreen = () => {
             autoComplete="tel"
           />
           <CustomButton
-            title={isSubmitting ? "Updating..." : "Save Changes"}
+            title={isLoading ? "Updating..." : "Save Changes"}
             handlePress={handleSave}
             containerStyles="mt-6 w-full"
             textStyles="text-white"
-            isLoading={isSubmitting}
-            disableButton={isSubmitting}
+            disableButton={isLoading}
           />
         </ScrollView>
       )}

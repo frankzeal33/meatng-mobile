@@ -1,4 +1,5 @@
 import CustomButtomSheet from "@/components/CustomButtomSheet";
+import CartHeaderButton from "@/components/CartHeaderButton";
 import CustomButton from "@/components/CustomButton";
 import PlanCard from "@/components/PlanCard";
 import RetryButton from "@/components/RetryButton";
@@ -154,6 +155,7 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
     setSubInfo({
       subscription: selectedPlan.subscription,
       selectedFrequency,
+      source: variant,
     });
 
     router.push("/(onboarding)/PrebuiltBox");
@@ -251,6 +253,18 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
         />
       )}
 
+      {isTab && (
+        <View className="flex-row items-center justify-between py-3">
+          <View className="flex-1 pr-3">
+            <Text className="font-mbold text-xl">Plans</Text>
+            <Text className="font-mregular text-sm text-gray">
+              Choose the box that works for you.
+            </Text>
+          </View>
+          <CartHeaderButton />
+        </View>
+      )}
+
       {loading && (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#218225" />
@@ -277,11 +291,11 @@ export function PlansContent({ variant = "onboarding" }: PlansScreenProps) {
           ListHeaderComponent={
             plans.length > 0 ? (
               <View className="pb-2">
-                <Text
-                  className={`font-mbold ${isTab ? "text-xl" : "text-2xl"}`}
-                >
-                  {isTab ? "Plans" : "Pick a plan, build your box."}
-                </Text>
+                {!isTab && (
+                  <Text className="font-mbold text-2xl">
+                    Pick a plan, build your box.
+                  </Text>
+                )}
                 <Text className="font-mregular text-sm leading-5 text-gray">
                   {isTab
                     ? "Each plan comes pre-packed with quality cuts."

@@ -2,7 +2,7 @@ import type MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIco
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import type { ImageSource } from "expo-image";
 import type { Href } from "expo-router";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import type { ComponentProps, Key, ReactElement, ReactNode } from "react";
 import type { Animated, KeyboardTypeOptions, TextInputProps } from "react-native";
 
 // Auth
@@ -32,13 +32,14 @@ export type AuthOtpScreenProps = {
   email?: string;
   buttonTitle?: string;
   numberOfDigits?: number;
-  onConfirm: (otp: string) => void;
+  onConfirm: (otp: string) => boolean | Promise<boolean>;
   onResend?: () => void | Promise<void>;
 };
 
 export type CountDownProps = {
   initialSeconds: number;
   onFinish?: () => void;
+  resetKey?: number;
 };
 
 export type CustomBottomSheetProps = {
@@ -120,6 +121,7 @@ export type HeaderProps = {
 };
 
 export type SpaceBetweenProps = {
+  key?: Key;
   title: ReactNode;
   value: ReactNode;
   containerStyles?: string;
@@ -363,6 +365,7 @@ export type HomeListHeaderProps = {
   searchValue: string;
   onFilterChange: (filter: string) => void;
   onSearchChange: (value: string) => void;
+  onBackPress?: () => void;
 };
 
 export type OverviewCardProps = {

@@ -15,7 +15,7 @@ import type {
 } from "@/types";
 import { toGrams } from "@/utils/conversion";
 import displayCurrency from "@/utils/displayCurrency";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -146,11 +146,13 @@ export default function AddOns() {
     return colorMap;
   }, [categories]);
 
-  useEffect(() => {
-    if (!subInfo?.subscription || !subInfo.selectedFrequency) {
-      router.replace("/(onboarding)/Plans");
-    }
-  }, [subInfo]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!subInfo?.subscription || !subInfo.selectedFrequency) {
+        router.replace("/(onboarding)/Plans");
+      }
+    }, [subInfo]),
+  );
 
   const fetchCategories = useCallback(async () => {
     try {

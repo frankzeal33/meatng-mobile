@@ -22,7 +22,7 @@ import type {
 } from "@/types";
 import displayCurrency from "@/utils/displayCurrency";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetFlatList, BottomSheetModal } from "@gorhom/bottom-sheet";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +39,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
 import { z } from "zod";
+import {
+  hideLoader,
+  showLoader,
+  useIsLoading,
+} from "@/store/LoaderStore";
 
 const giftCheckoutSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
@@ -126,6 +131,7 @@ const mapGiftBox = (item: any): GiftBoxDetails => {
 const GiftCheckoutScreen = () => {
   const params = useLocalSearchParams<GiftCheckoutRouteParams>();
   const toast = useToast();
+  const isLoading = useIsLoading();
   const profile = useProfileStore((state) => state.userProfile);
   const orderSummaryRef = useRef<BottomSheetModal>(null);
   const savedAddressRef = useRef<BottomSheetModal>(null);
@@ -155,8 +161,6 @@ const GiftCheckoutScreen = () => {
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [resolvingOrder, setResolvingOrder] = useState(false);
-  const [paying, setPaying] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [touched, setTouched] = useState<
     Partial<Record<CheckoutField, boolean>>
@@ -291,11 +295,13 @@ const GiftCheckoutScreen = () => {
   };
 
   const openOrderSummary = async () => {
+    if (isLoading) return;
+
     setHasSubmitted(true);
     if (!validation.success || !giftBox) return;
 
     try {
-      setResolvingOrder(true);
+      showLoader();
       let addressId = selectedAddressId;
       if (!addressId) {
         const addressResponse = await axiosClient.post("/addresses", {
@@ -333,15 +339,16 @@ const GiftCheckoutScreen = () => {
         { type: "danger" },
       );
     } finally {
-      setResolvingOrder(false);
+      hideLoader();
     }
   };
 
   const payNow = async () => {
+    if (isLoading) return;
     if (!giftBox || !resolvedAddressId) return;
 
     try {
-      setPaying(true);
+      showLoader();
       const response = await axiosClient.post("/gifts", {
         recipient_email: params.recipientEmail ?? "",
         recipient_name: params.recipientName ?? "",
@@ -371,7 +378,7 @@ const GiftCheckoutScreen = () => {
         { type: "danger" },
       );
     } finally {
-      setPaying(false);
+      hideLoader();
     }
   };
 
@@ -450,7 +457,7 @@ const GiftCheckoutScreen = () => {
 
         {!initialLoading && !loadError ? (
           <View className="px-4">
-            <CustomButton title="Continue" handlePress={openOrderSummary} isLoading={resolvingOrder} disableButton={!giftBox} containerStyles="mb-1 mt-2 w-full" textStyles="text-white" />
+            <CustomButton title="Continue" handlePress={openOrderSummary} disableButton={!giftBox} containerStyles="mb-1 mt-2 w-full" textStyles="text-white" />
           </View>
         ) : null}
       </KeyboardAvoidingView>
@@ -473,29 +480,47 @@ const GiftCheckoutScreen = () => {
           <Pressable accessibilityRole="button" accessibilityLabel="Close order summary" onPress={() => orderSummaryRef.current?.dismiss()} className="mb-3 size-12 items-center justify-center rounded-full bg-green-light">
             <Ionicons name="arrow-back" size={22} color="#218225" />
           </Pressable>
-          <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
-            <View>
-              <Text className="font-mbold text-2xl">Order Summary</Text>
-              <Text className="font-mregular text-sm text-gray">Confirm your gift box and delivery details before payment.</Text>
-            </View>
-            <View className="rounded-2xl bg-white p-4">
-              <Text className="font-mbold text-xl">{giftBox?.name ?? "Gift Box"}</Text>
-              <Text className="mt-1 font-mregular text-sm text-gray">{giftBox?.description}</Text>
-              <SpaceBetween title="Weight" value={giftBox?.weight ?? "—"} containerStyles="mt-4" titleStyles="text-gray" />
-            </View>
-            <View className="rounded-2xl bg-white p-4">
-              <Text className="mb-3 font-mbold text-xl">Included cuts</Text>
-              {giftBox?.products.length ? giftBox.products.map((item, index) => (
-                <View key={`${item.id}-${index}`} className={`flex-row items-center justify-between gap-3 ${index ? "mt-3" : ""}`}>
+          <BottomSheetFlatList
+            data={giftBox?.products ?? []}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            ListHeaderComponent={
+              <View>
+                <View className="mb-3">
+                  <Text className="font-mbold text-2xl">Order Summary</Text>
+                  <Text className="font-mregular text-sm text-gray">Confirm your gift box and delivery details before payment.</Text>
+                </View>
+                <View className="mb-3 rounded-2xl bg-white p-4">
+                  <Text className="font-mbold text-xl">{giftBox?.name ?? "Gift Box"}</Text>
+                  <Text className="mt-1 font-mregular text-sm text-gray">{giftBox?.description}</Text>
+                  <SpaceBetween title="Weight" value={giftBox?.weight ?? "—"} containerStyles="mt-4" titleStyles="text-gray" />
+                </View>
+                <View className="rounded-t-2xl bg-white px-4 pt-4">
+                  <Text className="mb-3 font-mbold text-xl">Included cuts</Text>
+                </View>
+              </View>
+            }
+            renderItem={({ item, index }) => (
+              <View className={`bg-white px-4 ${index ? "pt-3" : ""}`}>
+                <View className="flex-row items-center justify-between gap-3">
                   <View className="min-w-0 flex-1 flex-row items-center gap-2">
-                    <Text className="flex-shrink font-mregular text-sm text-gray">{item.name}</Text>
+                    <Text className="shrink font-mregular text-sm text-gray">{item.name}</Text>
                     {item.quantity > 1 ? <View className="rounded-full bg-green-light px-2 py-1"><Text className="font-msbold text-[10px] text-green">{item.quantity}x</Text></View> : null}
                   </View>
                   <Text className="font-msbold text-xs">{item.weight}</Text>
                 </View>
-              )) : <Text className="font-mregular text-sm text-gray">No included cuts available.</Text>}
-            </View>
-            <View className="rounded-2xl bg-white p-4">
+              </View>
+            )}
+            ListEmptyComponent={
+              <View className="bg-white px-4">
+                <Text className="font-mregular text-sm text-gray">No included cuts available.</Text>
+              </View>
+            }
+            ListFooterComponent={
+              <View>
+                <View className="mb-3 h-4 rounded-b-2xl bg-white" />
+                <View className="rounded-2xl bg-white p-4">
               <Text className="mb-3 font-mbold text-xl text-green">Recipient Information</Text>
               <SpaceBetween title="Recipient name" value={params.recipientName ?? "—"} titleStyles="text-gray" />
               <SpaceBetween title="Phone Number" value={params.recipientPhone ?? "—"} containerStyles="mt-3" titleStyles="text-gray" />
@@ -504,16 +529,18 @@ const GiftCheckoutScreen = () => {
               <SpaceBetween title="Delivery date" value={params.deliveryDate ?? "—"} containerStyles="mt-3" titleStyles="text-gray" />
               <SpaceBetween title="Delivery window" value={params.deliveryWindow ?? "—"} containerStyles="mt-3" titleStyles="text-gray" />
               {params.giftNote ? <View className="mt-4"><Text className="font-msbold text-sm text-green">Gift note</Text><Text className="mt-2 font-mregular text-sm leading-6 text-gray">{params.giftNote}</Text></View> : null}
-            </View>
-            <View className="rounded-2xl bg-white p-4">
+                </View>
+                <View className="mt-3 rounded-2xl bg-white p-4">
               <SpaceBetween title="Box price" value={displayCurrency(giftBox?.price ?? 0, "NGN")} titleStyles="text-gray" />
               <SpaceBetween title="Delivery Fee" value={displayCurrency(deliveryFee, "NGN")} containerStyles="mt-2" titleStyles="text-gray" />
               <View className="my-2 h-px bg-gray-200" />
               <SpaceBetween title="Total" value={displayCurrency(total, "NGN")} titleStyles="font-mbold text-lg" valueStyles="font-msbold text-lg text-green" />
-            </View>
-            <Text className="font-mregular text-xs text-gray">Make sure you complete delivery information before payment.</Text>
-          </BottomSheetScrollView>
-          <CustomButton title="Pay Now" handlePress={payNow} isLoading={paying} containerStyles="mb-2 mt-4 w-full" textStyles="text-white" />
+                </View>
+                <Text className="mt-3 font-mregular text-xs text-gray">Make sure you complete delivery information before payment.</Text>
+              </View>
+            }
+          />
+          <CustomButton title="Pay Now" handlePress={payNow} containerStyles="mb-2 mt-4 w-full" textStyles="text-white" />
         </View>
       </CustomButtomSheet>
     </SafeAreaView>

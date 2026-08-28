@@ -37,24 +37,25 @@ const contactChannels: SupportChannel[] = [
 ];
 
 const frontendUrl =
-  process.env.EXPO_PUBLIC_FRONTEND_URL ?? "https://meatng.com";
+  process.env.EXPO_PUBLIC_FRONTEND_URL
 
 const legalDocuments = [
   {
     id: "terms",
     title: "Terms of Service",
     icon: "file-document-outline" as const,
-    url: `${frontendUrl}/MeatNG_Terms_and_Conditions.pdf`,
+    url: `${frontendUrl}/terms`,
   },
   {
     id: "privacy",
     title: "Privacy Policy",
     icon: "shield-lock-outline" as const,
-    url: `${frontendUrl}/MeatNG_Privacy_Policy.pdf`,
+    url: `${frontendUrl}/privacy-policy`,
   },
 ];
 
 const SupportScreen = () => {
+  
   const toast = useToast();
 
   const openContactChannel = async (channel: SupportChannel) => {

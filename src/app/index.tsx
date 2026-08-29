@@ -1,9 +1,10 @@
+import { images } from "@/constants";
 import { useAuthStore } from "@/store/AuthStore";
 import { hasCompletedOnboarding } from "@/utils/onboardingStorage";
 import { Redirect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 
 export default function App() {
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -27,6 +28,13 @@ export default function App() {
     return (
       <View className="flex-1 justify-center items-center bg-green">
         <StatusBar style="light" />
+        <View className="flex-row justify-center items-center">
+          <Image
+            source={images.splashIcon}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
       </View>
     );
   }
@@ -43,3 +51,10 @@ export default function App() {
     />
   );
 }
+
+const styles = StyleSheet.create({
+  logo: {
+    width: 170,
+    height: 170,
+  },
+});

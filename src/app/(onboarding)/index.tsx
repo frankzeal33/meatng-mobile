@@ -171,11 +171,11 @@ export default function Index() {
   }, []);
 
   const handleGetStarted = useCallback(() => {
-    router.replace("/(onboarding)/Plans");
+    router.push("/(onboarding)/Plans");
   }, []);
 
   const handleLogin = useCallback(() => {
-    router.replace("/(onboarding)/Login");
+    router.push("/(onboarding)/Login");
   }, []);
 
   const handleSkip = useCallback(() => {

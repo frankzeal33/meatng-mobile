@@ -3,8 +3,7 @@ import FormField from "@/components/FormField";
 import SpaceBetweenHeader from "@/components/SpaceBetweenHeader";
 import { axiosClient } from "@/globalApi";
 import { hideLoader, showLoader, useIsLoading } from "@/store/LoaderStore";
-import type { AuthEmailRouteParams } from "@/types";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
@@ -30,11 +29,10 @@ type ForgotPasswordForm = z.input<typeof forgotPasswordSchema>;
 type ForgotPasswordField = keyof ForgotPasswordForm;
 
 export default function ForgotPassword() {
-  const params = useLocalSearchParams<AuthEmailRouteParams>();
   const toast = useToast();
   const isLoading = useIsLoading();
   const [form, setForm] = useState<ForgotPasswordForm>({
-    email: params.email ?? "",
+    email: "",
   });
   const [touched, setTouched] = useState<
     Partial<Record<ForgotPasswordField, boolean>>

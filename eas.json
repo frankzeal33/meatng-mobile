@@ -4,15 +4,28 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_SERVER_URI": "https://stg-api.meatng.com",
+        "EXPO_PUBLIC_FRONTEND_URL": "https://stg.meatng.com",
+        "EXPO_PUBLIC_MOBILE_APP_KEY": "pNI3vEbSOB_DFMsSvUTxgAceENATV9GmmEAXL9Lx1A8"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "extends": "base",
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest"
+      }
     }
   },
   "submit": {

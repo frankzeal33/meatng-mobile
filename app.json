@@ -8,8 +8,11 @@
     "scheme": "meatng",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.loxfordtrading.meatNG"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.loxfordtrading.meatNG",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

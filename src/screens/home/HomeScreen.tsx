@@ -167,7 +167,6 @@ export default function HomeScreen() {
         const message =
           error.response?.data?.message ?? "Unable to load your account.";
         setStatsError(message);
-        toast.show(message, { type: "danger" });
       } finally {
         if (showSkeleton) {
           setInitialLoading(false);

@@ -209,12 +209,7 @@ export default function Login() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() =>
-              router.push({
-                pathname: "/(onboarding)/ForgotPassword",
-                params: { email: form.email },
-              })
-            }
+            onPress={() => router.push("/(onboarding)/ForgotPassword")}
             className="mt-6 self-end active:opacity-70"
           >
             <Text className="font-msbold text-base text-green">

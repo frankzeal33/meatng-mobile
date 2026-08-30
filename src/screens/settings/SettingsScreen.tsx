@@ -69,6 +69,7 @@ export default function SettingsScreen() {
   const openItem = async (item: SettingsMenuItem) => {
     if (item.id === "logout") {
       await Promise.all([logout(), clearProfile()]);
+      router.dismissAll();
       router.replace("/(onboarding)/Login");
       return;
     }

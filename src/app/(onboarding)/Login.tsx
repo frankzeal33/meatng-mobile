@@ -130,9 +130,10 @@ export default function Login() {
         type: "success",
       });
 
+      setForm({ email: rememberedEmail, password: "" })
+      
       router.replace("/(protected)/(tabs)/Home")
 
-      setForm({ email: rememberedEmail, password: "" })
     } catch (error: any) {
       const message = error.response?.data?.message
 

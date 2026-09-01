@@ -41,12 +41,15 @@ const PaymentGatewayScreen = () => {
     redirectTimer.current = setTimeout(() => {
       switch (destination) {
         case "orders":
+          router.dismissAll();
           router.replace("/(protected)/(tabs)/Home/OrderHistory");
           break;
         case "subscriptions":
+          router.dismissAll();
           router.replace("/(protected)/(tabs)/Home/MySubscriptions");
           break;
         default:
+          router.dismissAll();
           router.replace("/(protected)/(tabs)/Home");
       }
     }, 4000);

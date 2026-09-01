@@ -133,10 +133,23 @@ export default function Register() {
         type: "success",
       });
 
+      setForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+        referralCode: ""
+      });
+      setTouched({});
+      setHasSubmitted(false);
+
       router.push({
         pathname: "/(onboarding)/RegisterOTP",
         params: { email },
       });
+
     } catch (error: any) {
       const message = error.response?.data?.message ?? "An error occurred. Please try again.";
 

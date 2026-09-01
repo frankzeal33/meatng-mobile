@@ -59,7 +59,15 @@ const FormField = ({
         className={`${inputBg ?? "bg-white"} border ${error ? "border-red-600" : isFocused ? "border-green" : "border-gray-300"} h-14 w-full flex-row items-center gap-1 rounded-lg px-4 ${inputContainerStyles ?? ""}`}
       >
         <TextInput
-          className={`${inputBg ?? "bg-white"} h-full flex-1 font-mregular text-base text-black`}
+          className={`${inputBg ?? "bg-white"} flex-1 font-mregular text-base text-black`}
+          style={{
+            height: 24,
+            lineHeight: 20,
+            paddingTop: 0,
+            paddingBottom: 0,
+            textAlignVertical: "center",
+            includeFontPadding: false
+          }}
           value={value}
           placeholder={placeholder}
           placeholderTextColor="#A3A3A3"

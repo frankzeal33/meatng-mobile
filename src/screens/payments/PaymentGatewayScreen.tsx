@@ -1,6 +1,5 @@
 import {
-  SettingsHeader,
-  SettingsScreenRoot,
+  SettingsHeader
 } from "@/components/settings/SettingsShell";
 import { axiosClient } from "@/globalApi";
 import { useAddonStore } from "@/store/addonStore";
@@ -11,6 +10,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { WebView, type WebViewNavigation } from "react-native-webview";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 type VerificationState = {
   message: string;
@@ -147,7 +148,9 @@ const PaymentGatewayScreen = () => {
   };
 
   return (
-    <SettingsScreenRoot>
+    <SafeAreaView className="bg-background" style={{ flex: 1 }}>
+      <StatusBar style="dark" />
+
       <SettingsHeader
         title="Complete Payment"
         subtitle="Pay securely with Paystack."
@@ -222,7 +225,7 @@ const PaymentGatewayScreen = () => {
           ) : null}
         </View>
       )}
-    </SettingsScreenRoot>
+    </SafeAreaView>
   );
 };
 

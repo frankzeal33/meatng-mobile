@@ -81,7 +81,8 @@ const SavedAddressCard = ({
           accessibilityRole="button"
           disabled={actionDisabled}
           onPress={() => onEdit(item)}
-          className={`h-10 flex-row items-center justify-center gap-1 rounded-lg border border-green px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
+          style={{ flexShrink: 0 }}
+          className={`min-h-10 flex-row items-center justify-center gap-1 rounded-lg border border-green px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
         >
           <MaterialCommunityIcons
             name="pencil-box-outline"
@@ -96,7 +97,8 @@ const SavedAddressCard = ({
             accessibilityRole="button"
             disabled={actionDisabled}
             onPress={() => onSetDefault(item)}
-            className={`h-10 min-w-24 items-center justify-center rounded-lg border border-green px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
+            style={{ flexShrink: 0 }}
+            className={`min-h-10 min-w-24 items-center justify-center rounded-lg border border-green px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
           >
             {isSettingDefault ? (
               <ActivityIndicator size="small" color="#218225" />
@@ -112,14 +114,17 @@ const SavedAddressCard = ({
           accessibilityRole="button"
           disabled={actionDisabled}
           onPress={() => onRemove(item)}
-          className={`h-10 min-w-20 flex-row items-center justify-center gap-1 rounded-lg border border-red-600 px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
+          style={{ flexShrink: 0 }}
+          className={`min-h-10 min-w-20 flex-row items-center justify-center gap-1 rounded-lg border border-red-600 px-2 active:opacity-70 ${actionDisabled ? "opacity-50" : ""}`}
         >
           {isRemoving ? (
             <ActivityIndicator size="small" color="#E7000B" />
           ) : (
             <>
               <MaterialCommunityIcons name="delete" size={15} color="#E7000B" />
-              <Text className="font-msbold text-xs text-red-600">Remove</Text>
+              <Text className="font-msbold text-xs text-red-600">
+                Remove
+              </Text>
             </>
           )}
         </Pressable>

@@ -28,7 +28,9 @@ const CustomButton = ({
         />
       ) : (
         <>
-          <Text className={`font-mbold text-lg ${textStyles}`}>{title}</Text>
+          <Text className={`font-mbold text-lg ${textStyles}`}>
+            {title}
+          </Text>
           {rightElement}
         </>
       )}

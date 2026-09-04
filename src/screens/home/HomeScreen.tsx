@@ -388,7 +388,8 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                   onPress={renewSubscription}
                   disabled={renewing}
-                  className={`h-11 items-center justify-center rounded-lg bg-green px-4 active:opacity-80 ${renewing ? "opacity-50" : ""}`}
+                  style={{ flexShrink: 0 }}
+                  className={`min-h-11 items-center justify-center rounded-lg bg-green px-4 active:opacity-80 ${renewing ? "opacity-50" : ""}`}
                 >
                   <Text className="font-mbold text-xs text-white">
                     {renewing ? "Processing..." : "Renew Subscription"}
@@ -401,7 +402,8 @@ export default function HomeScreen() {
                 onPress={() =>
                   router.push("/(protected)/(tabs)/Home/MySubscriptions")
                 }
-                className="h-11 items-center justify-center rounded-lg bg-green px-6 active:opacity-80"
+                style={{ flexShrink: 0 }}
+                className="min-h-11 items-center justify-center rounded-lg bg-green px-6 active:opacity-80"
               >
                 <Text className="font-mbold text-xs text-white">
                   Manage Subscription
@@ -412,8 +414,10 @@ export default function HomeScreen() {
               stats.whatsappCommunityUrl ? (
                 <Pressable
                   accessibilityRole="link"
+                  accessibilityLabel="Join Our Community"
                   onPress={openCommunity}
-                  className="h-11 flex-row items-center justify-center gap-1.5 rounded-lg bg-green px-4 active:opacity-80"
+                  style={{ flexShrink: 0 }}
+                  className="min-h-11 flex-row items-center justify-center gap-1.5 rounded-lg bg-green px-4 active:opacity-80"
                 >
                   <MaterialCommunityIcons
                     name="whatsapp"

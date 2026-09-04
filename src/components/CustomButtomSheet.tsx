@@ -11,10 +11,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "react-native";
 
+const CONTENT_BOTTOM_SPACING = 12;
+
 const CustomButtomSheet = forwardRef<
   CustomBottomSheetRef,
   CustomBottomSheetProps
 >((props, ref) => {
+  const insets = useSafeAreaInsets();
+
   const renderBackdrop = useCallback(
     (props: any) => (
       <BottomSheetBackdrop
@@ -60,7 +64,7 @@ const CustomButtomSheet = forwardRef<
           style={{
             flex: 1,
             paddingHorizontal: 16,
-            paddingBottom: 32,
+            paddingBottom: insets.bottom + CONTENT_BOTTOM_SPACING,
           }}
         >
           {props.children}
@@ -70,7 +74,7 @@ const CustomButtomSheet = forwardRef<
           style={{
             flex: 1,
             paddingHorizontal: 16,
-            paddingBottom: 32,
+            paddingBottom: insets.bottom + CONTENT_BOTTOM_SPACING,
           }}
         >
           {props.children}

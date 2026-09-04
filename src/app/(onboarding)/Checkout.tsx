@@ -46,9 +46,9 @@ import {
 } from "@/store/LoaderStore";
 
 const frontendUrl =
-  process.env.EXPO_PUBLIC_FRONTEND_URL ?? "https://meatng.com";
-const termsUrl = `${frontendUrl}/MeatNG_Terms_and_Conditions.pdf`;
-const privacyUrl = `${frontendUrl}/MeatNG_Privacy_Policy.pdf`;
+  process.env.EXPO_PUBLIC_FRONTEND_URL;
+const termsUrl = `${frontendUrl}/terms`;
+const privacyUrl = `${frontendUrl}/privacy-policy`;
 
 const checkoutSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),

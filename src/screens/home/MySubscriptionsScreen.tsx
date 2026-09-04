@@ -108,7 +108,8 @@ const ActionButton = ({
     accessibilityRole="button"
     disabled={loading}
     onPress={onPress}
-    className={`h-10 min-w-24 flex-row items-center justify-center gap-1 rounded-lg border px-3 active:opacity-70 ${destructive ? "border-red-600" : "border-green"} ${loading ? "opacity-50" : ""}`}
+    style={{ flexShrink: 0 }}
+    className={`min-h-10 min-w-24 flex-row items-center justify-center gap-1 rounded-lg border px-3 active:opacity-70 ${destructive ? "border-red-600" : "border-green"} ${loading ? "opacity-50" : ""}`}
   >
     {loading ? (
       <ActivityIndicator

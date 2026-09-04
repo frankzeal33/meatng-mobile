@@ -6,9 +6,9 @@
   "build": {
     "base": {
       "env": {
-        "EXPO_PUBLIC_SERVER_URI": "https://stg-api.meatng.com",
-        "EXPO_PUBLIC_FRONTEND_URL": "https://stg.meatng.com",
-        "EXPO_PUBLIC_MOBILE_APP_KEY": "pNI3vEbSOB_DFMsSvUTxgAceENATV9GmmEAXL9Lx1A8"
+        "EXPO_PUBLIC_SERVER_URI": "https://api.meatng.com",
+        "EXPO_PUBLIC_FRONTEND_URL": "https://meatng.com",
+        "EXPO_PUBLIC_MOBILE_APP_KEY": "2e8dd455a563828d17e14a5aceaf6b488dedb466b4d06f8b9ee70f76378778e6"
       },
       "channel": "base"
     },
